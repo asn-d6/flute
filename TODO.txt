@@ -1,0 +1,44 @@
+[*] TODO
+
+* There are obvious UI/UX improvements that can be easily performed if you mess
+  around with the weechat plugin API:
+         https://weechat.org/files/doc/devel/weechat_scripting.en.html
+         https://weechat.org/files/doc/stable/weechat_plugin_api.en.html
+
+  Example of UI/UX things that need to be done:
+
+    - Better indication of encrypted messages vs plaintext messages.
+    - A "room-status" command would be nice that prints the current room
+      message key, the room member list (or the number of members), the
+      member's identity keys and whether they are friends or not.
+    - More informative viola messages. Better coloring. The control panel sucks.
+    - Better use of the weechat status bar (see what weechat-otr is doing)
+    - Better friend management.
+
+* unit tests (e.g. test packet parsing, transport format, command parsing)
+* integration tests
+* we really need a good testsuite to test protocol/code changes
+  see weechat FIFO queue for weechat integration tests
+
+* use the weechat configuration variables to pass information to viola.
+  example options:
+          - disable verification of captain (yolo join)
+          - disable verification of joining members (yolo room)
+
+* if "/viola start-room" is called in the weechat buffer, make it join a random
+  IRC channel with good default IRC mode (+S etc.), and become the captain there.
+
+* Multiple IRC server support.
+
+* Better isolation of codebase in modules
+
+* UX improvement: Add a captain viola packet that informs users that they got
+      declined when joining a room (because their keys are not trusted, etc.)
+
+* Figure out race conditions with people joining/leaving and the key being updated.
+  Busy rooms will probably need clients to keep overlapping message keys.
+
+* Improve viola packet format ( version fields , etc.)
+
+* What to do if two captains in room (two people sending KEY_TRANSPORT)?
+

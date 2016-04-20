@@ -1,0 +1,515 @@
+                            Viola Specification
+Protocol version: v0
+                              'One always plays the viola while they drink and chatter...'
+---------------------------------------------------------------------------------------
+
+[*] System overview:
+
+  Viola is a multiparty messaging protocol with certain security properties. It
+  aims to be chat framework agnostic (like OTR), but the current spec is
+  optimized for use over IRC.
+
+  The protocol offers end-to-end confidentiality on group messages, as well as
+  entity authentication. At its present form, it does not aim to provide
+  security properties like deniability, transcript consistency or room
+  consistency.
+
+  Viola is not a very secure messaging protocol when you compare it to
+  theoretical protocols like mpOTR. But Viola is real! It's implemented and its
+  protocol is simple to understand, implement and experiment with. There is
+  lots of room for improvement, heuristics and complexity. The challenge is
+  figuring out which features and use cases it can support.
+
+  See section [VIOLA-HISTORY] for the past and possible future of the viola protocol.
+
+---------------------------------------------------------------------------------------
+
+[*] Protocol overview:
+
+  Every viola user has a long-term identity signing key that is used to provide
+  entity authentication when they send viola packets.
+
+  The viola protocol does not use a (multiparty) key exchange protocol to
+  generate group encryption keys. Instead the viola protocol uses a room
+  captain and a key transport protocol to ship encryption keys to the room
+  participants:
+
+  Specifically, the room captain is the first person who joins the room and is
+  responsible for introducing new joining members to the room. Every new person
+  who wants to join the room, needs to announce an ephemeral curve25519 public
+  key that will be used in the key transport protocol. The captain then
+  generates a fresh group symmetric key, encrypts it using the joining member's
+  ephemeral public key and sends the ciphertext to room. The new member
+  decrypts the group symmetric key and uses it to send messages to the viola
+  room.
+
+  The room gets teared down when the captain exits the room or goes offline.
+
+-------------------------------------------------------------------------------------
+
+[*] User workflow
+
+  A basic Viola user workflow is as follows:
+
+  Step 0) Alice collects the public identity keys of her friends' and adds them
+          to her viola friends database.
+
+  Step 1) Alice joins an empty IRC channel and issues a viola "start-room" command
+          to turn the channel into a Viola room and become the room captain.
+
+  Step 2) She then invites her friends to enter the channel and issue the
+          "join-room" command to join the viola room.
+
+  Step 3) As her friends join, Alice the room captain is tasked with generating
+          symmetric group keys and transporting them securely to the room participants.
+
+  Step 4) Alice and her friends can now broadcast encrypted messages to each
+          other using the symmetric group message keys.
+
+[*] Use cases
+
+  At its present form (v0) the Viola protocol can accomodate the following use cases:
+
+  - Alice works in an evil factory. She needs to privately speak to her
+    coworkers about the abuse she is experiencing. One day in her shift, she
+    hands strips of paper with her Viola public key to her coworkers. She tells
+    them to meet tonight at 21:00 in a viola room.
+
+    Alice at 20:55 uses Viola to visit the viola room, and announces herself as
+    the captain of the channel. At 21:00, her friends start to join the viola
+    room. For every new member, Alice generates and passes group keys to them
+    in an end-to-end secure manner. Her friends can verify that it's actually
+    her because they know her Viola public key. After the discussion finishes,
+    they pick a new date for their meeting and everyone shuts down the Viola
+    software.
+
+  - Bob is a computer security enthusiast. Bob wants to talk to his friends
+    about a new fun bug he found.  Fortunately, he has secure 1-to-1
+    communication channels with many of his friends (via OTR, pond, or
+    Signal). He uses OTR to pass his friends his Viola public key. Then he
+    arranges a rendezvous in a Viola room at a specific date. In the end of the
+    story, Bob and his friends meet in the Viola room and have a secure
+    stimulating conversation.
+
+  These are just some example use cases where viola can be useful. In the
+  future, and as the protocol evolves, more use cases will be possible.
+
+-------------------------------------------------------------------------------------
+
+[*] Viola cryptography:
+
+  Viola uses the PyNaCl library for cryptography which has heavily influenced
+  protocol design. NaCl was chosen because it's easy and speedy to develop and
+  prototype with. In the future, we could swap NaCl and use other crypto
+  libraries or primitives if there is a need.
+
+  For public key cryptography, we use the NaCl Box() construct which allows us
+  to encrypt messages using a curve25519 public key, a curve25519 private key,
+  and a fresh nonce. For more details see [PYNACL-BOX] in the references
+  section.
+
+  For symmetric key cryptography, we use the SecretBox() construct which allows
+  us to encrypt and authenticate messages using a symmetric key and a fresh
+  nonce. It uses Salsa20 for encryption and Poly1305 for authentication. For
+  more details see [PYNACL-SECRETBOX] in the references section.
+
+  For digital signatures, we use the NaCl SigningKey/VerifyKey construct. It
+  uses ed25519 signatures. For more details see [PYNACl-SIGS] in the reference
+  section.
+
+-------------------------------------------------------------------------------------
+
+[*] Key management:
+
+- Long term keys:
+
+  All Viola users have a long-term signing keypair. This keypair represents a
+  user's identity and is used to sign Viola packets.
+
+  Viola users also maintain a "friends database" in their disk where they store
+  their friend's long-term public keys for authenticating them in the
+  future. Users can learn their friends' keys through the "introduction"
+  command or through out-of-band means (e.g. OTR chat, or real life).
+
+- Ephemeral keys:
+
+  A user that joins a Viola room, generates and broadcasts an ephemeral "room
+  participant key" (signed by their long-term key) which is used by the captain
+  for key transport purposes.
+
+  After the captain learns the "room participant key" of a new room member, a
+  key transport protocol begins, through which the room participants learn the
+  "room message key" from the captain. This key is finally used by room
+  participants to encrypt group messages to each other.
+
+-------------------------------------------------------------------------------------
+
+[*] Transport format:
+
+  This section specifies the Viola transport and fragmentation
+  format. Fragmentation is required since not all Viola packets can fit in a
+  single IRC message. Our fragmentation format is heavily based on OTRv3.
+
+  The fragmentation format for sending <PACKET> is:
+      "?VLA,k,n!<PACKET>"
+  where k is the current fragment number, and n is the total number of fragments.
+
+  Viola needs to accumulate all packet fragments before it can join them to
+  forward the final packet to the user.
+
+  The first two characters of the packet payload is the opcode.
+  After that, the payload of Viola follows as a base64 encoded blob.
+
+  Simple example of packet with opcode "02":
+          "?VLA,1,1!02YXNkcXcxMzQxZm5qeGN2aG5xYXdvaHdxNGxoamZsbmEK=
+
+  Here is an example of sending the packet payload "NICEBANANA" with opcode "03" on
+  a network with maximum message length 13. We will need three fragments for this:
+
+          "?VLA,1,3!03NI"
+          "?VLA,2,3!CEBA"
+          "?VLA,3,3!NANA"
+
+  [XXX Come up with a better fixed-length IRC encoding than base64... (base253? base128?)]
+  [XXX update spec and code to use uint16 for k and n]
+  [XXX do we also need an "end of message" symbol like "." in OTR?]
+
+-------------------------------------------------------------------------------------
+
+[*] Viola Room Commands:
+
+[!] Room initialization:
+
+  Alice enters an empty IRC channel, initializes a Viola room and becomes its captain.
+
+  Command: /viola start-room
+
+  This command turns Alice into the room captain and forces her to monitor the
+  channel for new users. This command does not actually send any Viola packets
+  to the network.
+
+  If the channel is not empty when start-room is issued, return an error that the
+  channel needs to be empty (otherwise a leader might already be active in the channel).
+  [XXX improve behavior]
+
+-------------------------------------------------------------------------------------
+
+[!] Bob joins the viola room:
+
+  Command: /viola join-room
+
+  Bob joins the viola room taking place in the current channel.
+
+  When Bob joins the viola room, he generates an ephemeral "room participant key"
+  just for this session. He then advertises his ephemeral room participant key
+  and his long term identity key to the rest of the room:
+
+  Bob -> Everyone: (ROOM_JOIN) (opcode: 01)
+
+        SIGNATURE                            [64 bytes]
+        BOB_IDENTITY_PUBKEY                  [32 bytes]
+        BOB_ROOM_PARTICIPANT_PUBKEY          [32 bytes]
+
+        where SIGNATURE is a signature of all following fields using BOB_IDENTITY_PRIVKEY.
+
+  If the channel is empty when join-room is issued, throw an error and ask Bob to
+  issue a start-room command instead. [XXX improve behavior]
+
+  When Alice the captain receives a ROOM_JOIN packet from a new member, she
+  first needs to verify the packet signature and make sure it's coming from a
+  trusted friend. After doing so, Alice sends a KEY_TRANSPORT packet that
+  introduces the new member to the viola room.
+
+-------------------------------------------------------------------------------------
+
+[!] The captain transports channel keys to room participants:
+
+  When the room captain, Alice, notices a ROOM_JOIN packet in the channel from
+  a new participant, she needs to create a fresh "room message key" and
+  distribute it _securely_ to the room participants.
+
+  Before doing so Alice creates a fresh curve25519 "transport key". This key
+  along with each participant's "room participant key" are used to create a
+  symmetric key for each individual participant, which is used to encrypt the
+  "room message key".
+
+  Specifically, Alice for each participant (e.g. Bob) generates a nonce and does:
+
+        bob_key_transport = Box(key1=captain_transport_key,
+                                key2=bob_room_pub_key,
+                                nonce=nonce,
+                                msg=room_message_key)
+
+  Alice does this procedure for all participants (Bob, Charlie, Dave, etc.).
+  She then concatenates bob_key_transport, charlie_key_transport,
+  dave_key_transport and so on, to form a MESSAGE_KEY_ARRAY which contains the
+  "room message key" encrypted to all room participants individually.
+
+  She then sends the following Viola packet to the room:
+
+  Alice -> Everyone: (KEY_TRANSPORT) (opcode: 02)
+
+       SIGNATURE                                    [64 bytes]
+       CAPTAIN_IDENTITY_PUBKEY                      [32 bytes]
+       CAPTAIN_TRANSPORT_KEY                        [32 bytes]
+       MESSAGE_KEY_ARRAY                            [72 bytes * MEMBERS]
+
+       where SIGNATURE is a signature of all following fields using CAPTAIN_IDENTITY_PRIVKEY.
+
+  When room members receive the KEY_TRANSPORT packet, they first verify Alice's
+  signature and make sure that they trust it. Then they trial decrypt each cell
+  of the MESSAGE_KEY_ARRAY till they successfuly retrieve the room message key.
+
+  [XXX what's the best order of ciphertexts in MESSAGE_KEY_ARRAY?]
+  [XXX what should receiver do if they receive KEY_TRANSPORT from multiple
+       members of the room? Should members try to understand who the correct
+       captain is? Or should they accept KEY_TRANSPORT packets blindly? See
+       [RACES] section.]
+
+-------------------------------------------------------------------------------------
+
+[!] Bob sends an encrypted message to the viola room:
+
+  Bob retrieved the 'room message key' from a KEY_TRANSPORT packet and now
+  wants to send a 'message' to the viola room.
+
+  He first computes the ciphertext of his 'message' using the room message key:
+
+      MESSAGE_CIPHERTEXT = SecretBox(key=room_message_key, msg=message)
+
+  He then sends the following command to the channel:
+
+  Bob -> Everyone: (ROOM_MESSAGE) (opcode: 03)
+
+      SIGNATURE                 [64 bytes]
+      MESSAGE_CIPHERTEXT        [rest of bytes]
+
+      where SIGNATURE is a signature of all following fields using BOB_IDENTITY_PRIVKEY.
+
+
+   [XXX what should receivers do with the signature? do they verify every
+        signature from every room member? If they don't, then we don't really
+        provide origin authentication. If they do verify every signature, then
+        every room member needs to know every other room member which kind of
+        sucks for UX...]
+
+   [XXX length field on packet?]
+
+
+-------------------------------------------------------------------------------------
+
+[*] Miscellaneous Viola Commands:
+
+[!] Alice introduces herself to Bob:
+
+  This is an in-band way for Alice to pass her long-term public key to her peers.
+
+  Command: /viola introduction bob
+
+  Alice -> Bob: (INTRODUCTION) (opcode: 00)
+
+        SIGNATURE                 [64 bytes]
+        ALICE_IDENTITY_PUBKEY     [32 bytes]
+
+        where SIGNATURE is a signature of all following fields using ALICE_IDENTITY_PRIVKEY.
+
+  When Bob receives an INTRODUCTION packet, he is asked if he wants to save the
+  contact information of Alice.  If Bob agrees, he is asked for a petname for
+  Alice and stores her key under that petname in his key store.
+
+  We assume that Bob will not accept fraudulent keys and can verify the
+  correctness of Alice's pubkey through other out-of-band means.
+
+  [XXX maybe we also need an INTRODUCTION_ACK packet to let people know that you added their key?]
+
+-------------------------------------------------------------------------------------
+
+[*] Other protocol behaviors:
+
+[*] Identity validation
+
+  The room captain MUST trust the identity key of any user that requests to
+  join a viola room. Other room participants don't need to trust the identity
+  key of newly added members.
+
+  Viola users who request to join a channel, MUST trust the identity of the
+  room captain before accepting a KEY_TRANSPORT packet.
+
+  Viola users who receive a ROOM_MESSAGE packet, MUST trust the identity of the
+  sender by verifying the signature.
+
+  [XXX So everyone needs to trust everyone? Doesn't this suck for large groups?]
+  [XXX figure out better UX]
+  [XXX check out OTR policies]
+
+[!] Members leaving viola rooms
+
+  When Alice the captain sees a room participant leaving the IRC channel,
+  disconnecting from the server, or getting kicked, she issues a new
+  KEY_TRANSPORT command with a fresh room message key that does not include the
+  party that left.
+
+  If the captain of a viola room leaves the IRC channel, issues a ROOM_LEAVE
+  command or disconnects from the server, the other room participants need to
+  be informed about this with an error message.
+  [XXX how do people know who the captain is?]
+
+
+-------------------------------------------------------------------------------------
+
+[*] Security discussion
+
+[!] Implications of using a key transport protocol
+
+  Viola does not use a multiparty key exchange protocol for generating the room
+  message key collectively; instead the captain locally generates the group
+  message key and distributes it using a key transport protocol to the
+  participants. This results in a simpler protocol that easily supports groups
+  of dynamic size (people joining and leaving the group), but it also has
+  certain drawbacks.
+
+  Particularly, it gives more power to the room captain than other members of
+  the group. Examples:
+
+  - The room captain can invite people to the room at will.
+
+  - The room captain can kick people off the room by not including their room
+    message key ciphertexts in the KEY_TRANSPORT packet. Similarly, the room
+    captain can refuse to add a member to the room by ignoring their ROOM_JOIN
+    packet. This bad behavior of the captain is noticeable by the offended
+    party, but not from other members of the group.
+
+  - The room captain can split the room into subgroups by passing different
+    room message keys to different room members.
+
+  As a corollary of the above, the room captain is the only person in the room
+  who actually knows the real member list of the room. Everyone knows who is in
+  the IRC channel, but only the captain knows who actually has the same viola
+  room message key. For example, the captain could be filling the KEY_TRANSPORT
+  packet with fake values to make the room appear more populated than it is.
+  [TODO: maybe there is a crypto solution to this, if we add a ROOM_JOINED key
+  confirmation packet]
+
+  It's worth thinking about these attacks and devising possible fixes.  For
+  some more analysis on the tradeoffs of key transport protocols vs key
+  exchanges see [DANEZIS] in the references section.
+
+
+[!] The KEY_TRANSPORT protocol
+
+  The JOIN_ROOM and KEY_TRANSPORT packets perform a multiparty secure key
+  transport protocol in one round. The protocol also achieves forward secrecy
+  when deriving symmetric keys, by performing a DH computation based on the
+  ephemeral keys of both parties
+
+  The drawback of the KEY_TRANSPORT mechanism is that every member adds 72
+  bytes of ciphertext to the packet. That becomes a problem with big groups,
+  because the KEY_TRANSPORT packet needs to be fragmented multiple times which
+  increases latency and can cause various race conditions when other members
+  join and leave the room.
+
+  Are there better key transport protocols that we could use here? Ideally they
+  would be 1-round and they would provide perfect forward secrecy.
+
+[!] Replay attacks
+
+  Example of replay attacks that need to be addressed:
+
+  a) Attack: Replay attack on ROOM_JOIN can leak friend list of captain.
+     Possible Solution: add local information (nick, channel, server) to the packet?
+
+  b) Attack: Server can replay ROOM_MESSAGE packets and impersonate members of a chat.
+     Possible Solutions: keep a replay cache of nonces and refresh room message key every 10 mins?
+                         timestamps?
+
+  c) Attack: Server can replay KEY_TRANSPORT and ???
+
+[!] Race conditions [RACES]
+
+  IRC does not guarantee in-order delivery of packets, and different IRC users
+  can have different views of a conversation (messages may be reordered, or
+  simply dropped). This can cause various issues with key exchange and key
+  transport protocols.
+
+  For example, the KEY_TRANSPORT packet might be received by some users before
+  others. Users who receive the KEY_TRANSPORT packet earlier will use the new
+  group key to encrypt their messages, that the other users won't be able to
+  decrypt.
+
+  Another possible race condition is two people doing "start-room"
+  simultaneously and both of them becoming captains of a viola room. Viola
+  currently refuses to "start-room" if the IRC channel is populated, but it can
+  also happen that both captains see the channel empty even though it's
+  populated (especially with federated IRC servers, etc.)
+
+  We should try to identify all the various race conditions and fix them (maybe
+  by caching old keys for a while).
+
+-------------------------------------------------------------------------------------
+
+[*] Protocol past and future [VIOLA-HISTORY]
+
+  Viola is a simplified version of the celo protocol which was a complicated
+  version of the box protocol. The celo and box protocols were designed by joe
+  and ahf.
+
+  The common theme of all these protocols is that they don't use a multiparty
+  key exchange; instead one user generates the group encryption key and
+  transports it to the group in some way.
+
+  Celo had many more features than Viola. Here are some of them:
+
+  - All celo communication happened in one big channel. As a user, you parse
+    all incoming messages to the big channel, you trial-decrypt them, and if
+    the decryption is successful you display the contents to the user.  Celo
+    users could also build virtual channels inside the big channel. The idea
+    was that by having multiple people communicate at the same time in a common
+    channel, you could hide room metadata (like the list of room participants)
+    even from the server.
+
+  - Celo attempted to recover when the captain goes offline, using a leader
+    election protocol. No robust algorithm was suggested but using Raft or
+    something similar could work.
+
+  - Celo had better deniability properties than Viola.
+
+  - Celo supported one-to-one secure messaging.
+
+  Celo has lots of good ideas, but it's also a very complex protocol with
+  various unanswered questions on the design and engineering. Viola is a strict
+  subset of Celo; a much simpler protocol that is easier to analyze. But even
+  Viola has many unanswered questions! Maybe if we manage to solve these basic
+  questions, we can make Viola evolve into something more like Celo.
+
+  Other features that the Viola protocol could adopt in the future:
+
+  - Transcript consistency
+  - Room consistency
+  - Per-message ratchetting
+
+  [XXX link to unfinished celo spec??]
+  [XXX link to unfinished box spec?]
+
+-------------------------------------------------------------------------------------
+
+[*] Acknowledgments
+
+  Viola would not be possible without the 1337 celo crew: joe, ahf and infinity0.
+
+  Also reading and borrowing code from weechat-otr was very helpful while
+  bootstrapping the project. Thanks to koolfy for the weechat advice.
+
+-------------------------------------------------------------------------------------
+
+[*] References:
+
+  [PYNACL-BOX] https://pynacl.readthedocs.org/en/latest/public/
+
+  [PYNACL-SECRETBOX] https://pynacl.readthedocs.org/en/latest/secret/
+
+  [PYNACL-SIGS] https://pynacl.readthedocs.org/en/latest/signing/
+
+  [DANEZIS] https://conspicuouschatter.wordpress.com/2014/06/28/should-group-key-agreement-be-symmetric-and-contributory/
+
+-------------------------------------------------------------------------------------
+

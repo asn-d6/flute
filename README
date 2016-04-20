@@ -1,0 +1,102 @@
+DISCLAIMER:
+
+    THIS IS THE FIRST DRAFT OF THE VIOLA SPEC. VIOLA, AS A SOFTWARE AND AS A
+    PROTOCOL, ARE NOT USER READY YET. VIOLA IS CURRENTLY IN TESTING AND
+    DEVELOPMENT PHASE. PLEASE DON'T EVEN THINK OF USING IT FOR SENSITIVE STUFF!
+
+[*] Introduction:
+
+    Greetings. This is Viola, A multiparty chat protocol implemented on Weechat.
+    Please see viola_spec.txt for the protocol spec.
+
+[*] Installation:
+
+- Installing dependencies:
+
+    First of all you need to have a weechat installation. It should have Python
+    and SSL support. In Debian you can do # apt-get install weechat weechat-plugins
+
+    You also need to have PyNaCl installed on your system. On Debian testing
+    you can install by running: # apt-get install python-nacl
+    Alernatively, you can use the pip package manager. Or you can build from source.
+
+- Installing viola:
+
+    To install viola, just symlink the codebase directly into the weechat
+    python directory:
+
+      $ ln -s <path_to_viola>/weechat_viola.py ~/.weechat/python/
+      $ ln -s <path_to_viola>/viola ~/.weechat/python/
+
+    Don't forget to test that the symlinks work. Symlinks are magic after all.
+    [XXX need a makefile]
+
+[*] Usage:
+
+- Connecting to an IRC server using weechat:
+
+    Now launch weechat. We need to set it up so that it connects to the viola
+    server with SSL over Tor. Then we load up viola, and connect to the server.
+
+    ---------------------------------------------------------------------------------------
+    /server add bacon irc.baconsvin.org/6697
+    /set irc.server.bacon.ssl on
+
+    /proxy add tor socks5 127.0.0.1 9050
+    /set irc.server.bacon.proxy "tor"
+
+    /set irc.server.bacon.ssl_verify off    <-- WTF. Baconsvin SSL cert expired... Please only set this for testing.
+
+    /python load weechat_viola.py
+
+    /connect bacon
+    /j #viola_test
+    ---------------------------------------------------------------------------------------
+
+    If things went fine, you should connect to the server and viola should
+    print an initialization message to the central weechat buffer.
+
+- Using Viola:
+
+-- Finding friends
+
+    Viola assumes you can securely pass your Viola public key information to
+    your friends in some manner (e.g. using OTR, or in real life). You can use
+    the "/viola trust-key" command to import keys to your friend list.
+
+    Another way to find friends is to connect to a Viola IRC server, and
+    introduce yourself to them. For example, if you want to introduce yourself
+    to the user with nickname alice, do:
+
+             /viola introduction alice
+
+    After alice accepts your introduction, she can also introduce herself to
+    you.  Do this for all your friends so that you have a complete friend list.
+
+    Your friend list is saved on disk (see .weechat/viola/viola_account.friends)
+
+-- Starting viola rooms
+
+    After you have a good friend list, go to an empty channel and do:
+
+           /viola start-room
+
+    This should initialize a new viola room and make you the captain. Then ask
+    your friends to join your channel.
+
+-- Joining viola rooms
+
+    When your friends join your channel, they also need to join your viola
+    room. To do so, they just need to type:
+
+          /viola join-room
+
+   As long as the joining user's public key is in your friend list, the user
+   will be added automatically to the room by you. Otherwise, you need to ask
+   your friend to introduce themselves to you.
+
+-- Sending messages
+
+   After users have joined your room, you can just send encrypted messages to
+   each other as you normally would. Viola adds indicators when a received
+   message is encrypted or unencrypted.
