@@ -151,15 +151,17 @@ def handle_key_transport_packet(packet_payload, parsed, server):
     try:
         captain_friend_name = account.get_friend_from_identity_key(captain_identity_pubkey)
     except accounts.IdentityKeyNotTrusted:
+        hexed_captain_key = crypto.get_hexed_key(captain_identity_pubkey)
         buf = viola_room.buf
-        util.viola_channel_msg(buf, "Untrusted nickname %s is the captain of this channel with key: %s" % (sender, captain_identity_pubkey),
-                               "red")
-        util.viola_channel_msg(buf, "Ignoring KEY_TRANSPORT by untrusted captain. If you trust that key and"
+        util.viola_channel_msg(buf, "Untrusted nickname %s is the captain of this channel with key: %s" % (sender, hexed_captain_key),
+                               color="red")
+        util.viola_channel_msg(buf, "Ignoring KEY_TRANSPORT by untrusted captain. If you trust that key and "
                                "you want to join the channel, please issue the following command and rejoin:\n"
                                "\t /viola trust-key <name> %s\n"
-                               "where <name> is the nickname you want to assign to the key."  %
-                               crypto.get_hexed_key(captain_identity_pubkey), "red")
-        util.viola_channel_msg(buf, "Example: /viola trust-key alice %s" % crypto.get_hexed_key(captain_identity_pubkey), "red")
+                               "where <name> is the nickname you want to assign to the key."  % hexed_captain_key,
+                               color="red")
+        util.viola_channel_msg(buf, "Example: /viola trust-key alice %s" % hexed_captain_key,
+                               color="red")
         return ""
 
     # Verify captain signature
