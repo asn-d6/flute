@@ -5,11 +5,17 @@ import json
 import util
 import os
 
-import nacl.signing
-import nacl.encoding
-import nacl.secret
-import nacl.utils
-from nacl.public import PrivateKey, PublicKey, Box
+try:
+    import nacl.exceptions
+    import nacl.signing
+    import nacl.encoding
+    import nacl.secret
+    import nacl.utils
+    from nacl.public import PrivateKey, PublicKey, Box
+except nacl.exceptions.CryptoError, msg: # Catch any errors
+    print("!!! Failed to import PyNaCl: '%s'" % msg)
+    print("!!! Might be caused by https://github.com/pyca/pynacl/issues/186")
+    print("!!! Ignoring error, but no guarantees that viola will work... :(")
 
 # XXX pull in more crypto code in here.
 
