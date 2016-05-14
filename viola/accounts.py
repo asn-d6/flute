@@ -59,7 +59,7 @@ class Account(object):
             self.identity_privkey = crypto.load_identity_privkey_from_disk(self.identity_privkey_fname)
         except IOError: # file not found (?)
             self.identity_privkey = crypto.gen_signing_privkey()
-            util.debug("Generated identity keypair. Storing in '%s'.", self.identity_privkey_fname)
+            util.debug("Generated identity keypair. Storing in '%s'." % self.identity_privkey_fname)
             crypto.store_identity_privkey_to_disk(self.identity_privkey, self.identity_privkey_fname)
         except ValueError:
             util.debug("Could not parse privkey.")
