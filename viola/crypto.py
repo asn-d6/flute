@@ -13,6 +13,9 @@ from nacl.public import PrivateKey, PublicKey, Box
 
 # XXX pull in more crypto code in here.
 
+def get_random_bytes(n_bytes):
+    return nacl.utils.random(n_bytes)
+
 def gen_symmetric_key():
     return nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
 
@@ -117,6 +120,18 @@ def get_room_message_ciphertext(room_message_key, message):
     box = nacl.secret.SecretBox(room_message_key)
     nonce = nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE)
     ciphertext = box.encrypt(message, nonce)
+    return ciphertext
+
+def get_message_key_ciphertext(captain_room_participant_privkey, room_message_key, member_pubkey):
+    """
+    As the captain, encrypt the room_message_key for this particular room member
+    with key 'member_pubkey'.
+    """
+    encryption_box = Box(captain_room_participant_privkey, member_pubkey)
+    message = room_message_key
+    nonce = get_random_bytes(Box.NONCE_SIZE)
+
+    ciphertext = encryption_box.encrypt(message, nonce) # XXX move to crypto.py
     return ciphertext
 
 def decrypt_room_message(room_message_key, ciphertext):

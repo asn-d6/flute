@@ -1,8 +1,5 @@
 """ room.py : Code that manages Viola rooms and their members """
 
-import nacl.utils # XXX dirty. only crypto should touch nacl. move there!!!
-from nacl.public import Box
-
 import crypto
 import util
 import viola
@@ -14,14 +11,11 @@ class RoomMember(object):
         self.identity_pubkey = identity_pubkey
         self.room_pubkey = room_pubkey
 
-    def get_message_key_ciphertext(self, captain_room_participant_privkey, room_message_key):
-        """As the captain, encrypt the room_message_key for this particular room member."""
-        encryption_box = Box(captain_room_participant_privkey, self.room_pubkey)
-        message = room_message_key
-        nonce = nacl.utils.random(Box.NONCE_SIZE)
-
-        ciphertext = encryption_box.encrypt(message, nonce) # XXX move to crypto.py
-        return ciphertext
+    def get_message_key_ciphertext(self,
+                                   captain_room_participant_privkey,
+                                   room_message_key):
+        return crypto.get_message_key_ciphertext(captain_room_participant_privkey,
+                                                 room_message_key, self.room_pubkey)
 
     def change_nickname(self, old_nick, new_nick):
         """Update the nickname of this room member."""
