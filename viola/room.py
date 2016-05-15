@@ -92,6 +92,12 @@ class ViolaRoom(object):
         if self.i_am_captain and self.members:
                 viola.send_key_transport_packet(self) # XXX dirty calling viola.py
 
+    def rekey(self):
+        util.debug("Rekeying for room %s ." % self.name)
+        if self.i_am_captain: # and self.members:
+            viola.send_key_transport_packet(self)
+        else:
+            util.debug("Tried to rekey while i am not master." )
     def get_member(self, nick):
         if nick not in self.members:
             raise NoSuchMember

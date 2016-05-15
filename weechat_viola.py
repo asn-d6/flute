@@ -30,6 +30,7 @@ import viola.accounts as accounts
 
 VIOLA_DIR_NAME = 'viola'
 
+
 def create_viola_dir(dirname):
     """Create the OTR subdirectory in the WeeChat config directory if it does
     not exist."""
@@ -112,8 +113,19 @@ def new_nick_cb(data, signal, signal_data):
     viola.user_changed_irc_nick(old_nick, new_nick)
     return weechat.WEECHAT_RC_OK
 
+def rekey_timer_cb(data, remaining_calls):
+    viola.rekey_room(data)
+    return weechat.WEECHAT_RC_OK
+
+def rekey_timer_operation(room_server):
+    weechat.prnt("", " starting timer for room %s." % room_server)
+    weechat.hook_timer(60 * 1000, 60, 0, "rekey_timer_cb", room_server)
 
 ################################################################################
+
+application_operations = {
+        "rekey_timer" : rekey_timer_operation
+        }
 
 # Register the plugin with Weechat.
 
@@ -130,7 +142,7 @@ if reg:
         # Initialize user accounts
         viola_dir = os.path.join(otrlib.info_get('weechat_dir', ''), VIOLA_DIR_NAME)
         create_viola_dir(viola_dir)
-        accounts.init_accounts(viola_dir)
+        accounts.init_accounts(viola_dir, application_operations)
 
         # Celebrate and setup callbacks
         weechat.prnt("", otrlib.colorize("[Viola squeaks]", "green"))

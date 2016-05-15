@@ -511,5 +511,13 @@ def user_changed_irc_nick(old_nick, new_nick):
     # A user changed nick: we need to update the viola rooms.
     account.user_changed_nick(old_nick, new_nick)
 
+def rekey_room(room_id):
+    splited_room_id = room_id.split('.')
+    room = splited_room_id[0]
+    server = splited_room_id[1]
+    account = accounts.get_my_account()
+    viola_room = account.get_viola_room(room, server)
+    viola_room.rekey()
+
 class ViolaCommandError(Exception): pass
 class IncompletePacket(Exception): pass
