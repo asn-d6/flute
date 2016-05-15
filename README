@@ -22,18 +22,19 @@ DISCLAIMER:
 
 - Installing viola:
 
-    To install viola, just symlink the codebase directly into the weechat
-    python directory:
+    To install viola, simply run `make install` from the root viola directory.
 
-      $ ln -s <path_to_viola>/weechat_viola.py ~/.weechat/python/
-      $ ln -s <path_to_viola>/viola ~/.weechat/python/
-
-    Don't forget to test that the symlinks work. Symlinks are magic after all.
-    [XXX need a makefile]
+    Alternatively, if you are planning to do viola development, you can try
+    `make dev-install` which will symlink the files instead of copying them, so
+    you don't have to run `make install` everytime you do a change.
 
 [*] Usage:
 
 - Connecting to an IRC server using weechat:
+
+    The instructions below require you to have Tor installed. You can also do
+    it without Tor, but I'll let you figure out how to do it. Tor can be
+    installed in Debian by doing: # apt-get install tor
 
     Now launch weechat. We need to set it up so that it connects to the viola
     server with SSL over Tor. Then we load up viola, and connect to the server.
