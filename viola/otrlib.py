@@ -169,3 +169,7 @@ def colorize(msg, color):
             msg=line))
 
     return '\r\n'.join(result)
+
+def buffer_is_private(buf):
+    """Return True if a buffer is private."""
+    return buffer_get_string(buf, 'localvar_type') == 'private'

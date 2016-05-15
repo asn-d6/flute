@@ -1,6 +1,7 @@
 """commands.py: Functions that handle the weechat "/viola" commands"""
 
 import util
+import otrlib
 import introduction
 import viola
 import accounts
@@ -15,7 +16,27 @@ def start_room_cmd(parsed_args, buf):
 
 def introduction_cmd(parsed_args, buf):
     account = accounts.get_my_account()
-    introduction.send_introduction(account, parsed_args, buf)
+
+    # Prepare the metadata
+    server = util.get_local_server(buf)
+
+    # If a nick is provided, introduce to that nick. Otherwise, check if we are
+    # currently having a private conversation with another nick, and if so
+    # introduce to that nick.
+    if len(parsed_args) >= 2:
+        target_nick = parsed_args[1]
+    else:
+        if otrlib.buffer_is_private(buf):
+            target_nick = util.get_local_channel(buf)
+        else:
+            util.control_msg("Bad introduction command! Can't introduce yourself to a channel!")
+            raise viola.ViolaCommandError
+
+    introduction.send_introduction(account, target_nick, server, buf)
+
+    util.viola_channel_msg(buf,
+                           "[Introduced ourselves to %s.]" % target_nick, 
+                           color="green")
 
 def join_room_cmd(parsed_args, buf):
     """Prepare for sending ROOM_JOIN message."""

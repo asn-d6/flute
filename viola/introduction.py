@@ -42,14 +42,10 @@ def handle_introduction_packet(packet_payload, parsed):
 
     return ""
 
-def send_introduction(account, parsed_args, buf):
+def send_introduction(account, target_nick, server, buf):
     """Build msg that introduces ourselves ('account') to another person."""
 
-    # Validate args and print error otherwise XXX
-
-    # Prepare the metadata
-    nickname = parsed_args[1]
-    server = util.get_local_server(buf) # XXX
+    # XXX Validate args and print error otherwise
 
     # Prepare the introduction message to be sent
     my_pub_key = account.get_identity_pubkey()
@@ -58,4 +54,4 @@ def send_introduction(account, parsed_args, buf):
     payload_b64 = base64.b64encode(packet_signed)
 
     msg = viola.INTRODUCTION_OPCODE + payload_b64
-    transport.send_viola_privmsg(server, nickname, msg)
+    transport.send_viola_privmsg(server, target_nick, msg)
