@@ -43,6 +43,10 @@ class ViolaRoom(object):
         # This is the key to actually encrypt messages. We don't know it yet.
         self.room_message_key = None
 
+        # And this is its id
+        # XXX maybe it is dangerous to have predictable id's?
+        self.room_message_key_id = 0
+
         # A pointer to the weechat IRC buffer this room is in. XXX terrible abstraction
         self.buf = buf
 
@@ -63,14 +67,25 @@ class ViolaRoom(object):
         """Return our 'room participant private key'."""
         return self.participant_priv_key
 
-    def set_room_message_key(self, room_message_key):
+    def set_room_message_key(self, room_message_key, message_id):
         """We got the room message key! Set it!"""
+        self.old_room_message_key = self.room_message_key
         self.room_message_key = room_message_key
+        self.room_message_key_id = message_id
+        util.debug("Old message key %s" % crypto.get_hexed_key(self.old_room_message_key) )
 
     def get_room_message_key(self):
         if not self.room_message_key:
             raise NoMessageKey()
         return self.room_message_key
+
+    def get_old_room_message_key(self):
+        if not self.old_room_message_key:
+            raise NoMessageKey()
+        return self.old_room_message_key
+
+    def get_room_message_key_id(self):
+        return self.room_message_key_id
 
     def add_member(self, nickname, identity_pubkey, room_pubkey):
         """Add member to viola room."""
@@ -95,7 +110,7 @@ class ViolaRoom(object):
     def rekey(self):
         util.debug("Rekeying for room %s ." % self.name)
         if self.i_am_captain: # and self.members:
-            viola.send_key_transport_packet(self)
+            viola.send_key_transport_packet(self, rekey=True)
         else:
             util.debug("Tried to rekey while i am not master." )
     def get_member(self, nick):
@@ -110,7 +125,11 @@ class ViolaRoom(object):
         """
 
         assert(self.i_am_captain)
-        self.room_message_key = crypto.gen_symmetric_key() # XXX
+        #self.old_room_message_key = self.room_message_key
+        #self.room_message_key = crypto.gen_symmetric_key() # XXX
+        #self.room_message_key_id += 1
+        self.set_room_message_key(crypto.gen_symmetric_key(),
+                                  (self.room_message_key_id + 1) % 2**8)
 
         util.debug("Generated new room message key for %s: %s" %
                    (self.name, crypto.get_hexed_key(self.room_message_key)))
