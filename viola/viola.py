@@ -122,7 +122,7 @@ def handle_key_transport_packet(packet_payload, parsed, server):
     try:
         viola_room = account.get_viola_room(channel, server)
     except accounts.NoSuchRoom:
-        util.debug("Received ROOM_JOIN in a regular channel (%s). Ignoring." % channel)
+        util.debug("Received KEY_TRANSPORT in a regular channel (%s). Ignoring." % channel)
         return ""
 
     payload = base64.b64decode(packet_payload)
