@@ -29,7 +29,7 @@ import viola.commands as commands
 import viola.accounts as accounts
 
 VIOLA_DIR_NAME = 'viola'
-
+REKEY_TIME = 10 # in minuites
 
 def create_viola_dir(dirname):
     """Create the OTR subdirectory in the WeeChat config directory if it does
@@ -119,7 +119,7 @@ def rekey_timer_cb(data, remaining_calls):
 
 def rekey_timer_operation(room_server):
     weechat.prnt("", " starting timer for room %s." % room_server)
-    weechat.hook_timer(60 * 1000, 60, 0, "rekey_timer_cb", room_server)
+    weechat.hook_timer(REKEY_TIME * 60 * 1000, 60, 0, "rekey_timer_cb", room_server)
 
 ################################################################################
 
