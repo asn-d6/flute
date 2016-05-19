@@ -3,6 +3,7 @@
 import crypto
 import json # for saving state to disk
 import os
+import struct
 
 import util
 import otrlib
@@ -29,7 +30,7 @@ SIG_LEN = 64 # bytes per ed25519 sig
 PUBKEY_LEN = 32 # bytes per ed25519/curve25519 key
 SYMMETRIC_KEY_LEN = 32 # bytes per symmetric Box() key
 MESSAGE_KEY_ARRAY_CELL_LEN = 72 # bytes: 32 bytes symmetric key + 40 bytes of nacl overhead
-KEY_ID_LEN = 1
+KEY_ID_LEN = 4
 
 #XXX need to verify ROOM_MESSAGE packets with long-term secret!!!
 #XXX what happens if a user does join-room multiple times without leaving the channel
@@ -57,14 +58,6 @@ def handle_room_message_packet(packet_payload, parsed, server):
                                "lightcyan")
         return ""
 
-    try:
-        room_message_key = viola_room.get_room_message_key()
-    except room.NoMessageKey:
-        util.debug("Received ROOM_MESSAGE in %s but no message key. Ignoring." % channel) # XXX ???
-        util.viola_channel_msg(viola_room.buf,
-                               "[You hear a viola screeching... Please do '/viola join-room' to join the session.]",
-                               "grey")
-        return ""
 
     payload = base64.b64decode(packet_payload)
 
@@ -75,7 +68,18 @@ def handle_room_message_packet(packet_payload, parsed, server):
 
     # Get packet fields
     signature = payload[:SIG_LEN]
-    message_ciphertext = payload[SIG_LEN:]
+    key_id, = struct.unpack('>I',payload[SIG_LEN: SIG_LEN + KEY_ID_LEN])
+    util.debug("Received keyid is: %s" % str(key_id))
+    message_ciphertext = payload[KEY_ID_LEN + SIG_LEN:]
+
+    try:
+        room_message_key, _ = viola_room.get_room_message_key(key_id)
+    except room.NoMessageKey:
+        util.debug("Received ROOM_MESSAGE in %s but no message key. Ignoring." % channel) # XXX ???
+        util.viola_channel_msg(viola_room.buf,
+                               "[You hear a viola screeching... Please do '/viola join-room' to join the session.]",
+                               "grey")
+        return ""
 
     # XXX catch decrypt exception
     try:
@@ -138,7 +142,7 @@ def handle_key_transport_packet(packet_payload, parsed, server, rekey=False):
     captain_transport_pubkey = payload[SIG_LEN+PUBKEY_LEN : SIG_LEN+PUBKEY_LEN+PUBKEY_LEN]
     captain_transport_pubkey = crypto.parse_pub_key(captain_transport_pubkey)
 
-    new_key_id = payload[SIG_LEN + PUBKEY_LEN + PUBKEY_LEN: KEY_ID_LEN]
+    new_key_id, = struct.unpack('>I',payload[SIG_LEN + PUBKEY_LEN + PUBKEY_LEN: SIG_LEN + PUBKEY_LEN + PUBKEY_LEN + KEY_ID_LEN])
 
     encrypted_message_key_array = payload[SIG_LEN+PUBKEY_LEN+PUBKEY_LEN + KEY_ID_LEN:]
 
@@ -342,7 +346,7 @@ def handle_outgoing_irc_msg_to_channel(parsed, server):
         return msg
 
     try:
-        room_message_key = viola_room.get_room_message_key()
+        room_message_key, key_id = viola_room.get_room_message_key()
     except room.NoMessageKey:
         util.debug("No message key at %s. Sending plaintext." % channel) # XXX ???
         return msg
@@ -353,11 +357,12 @@ def handle_outgoing_irc_msg_to_channel(parsed, server):
 
     util.debug("Sending encrypted msg to %s" % channel)
 
+    key_id_bytes = struct.pack('>I', key_id)
     # OK we are in a viola room and we even know the key!
     # Send a ROOM_MESSAGE!
     # XXX functionify
     ciphertext = crypto.get_room_message_ciphertext(room_message_key, msg)
-    packet_signed = account.sign_msg_with_identity_key(ciphertext)
+    packet_signed = account.sign_msg_with_identity_key(key_id_bytes + ciphertext)
 
     payload_b64 = base64.b64encode(packet_signed)
 
@@ -400,7 +405,7 @@ def send_key_transport_packet(viola_room, rekey=False):
     captain_identity_key = account.get_identity_pubkey()
     captain_transport_key = viola_room.get_room_participant_pubkey() # XXX maybe special func for captain's key?
     message_key_array = viola_room.get_message_key_array() # XXX also generates key. rename.
-    new_message_key_id = bytes(str(viola_room.get_room_message_key_id()))#.bytes(KEY_ID_LEN, byteorder='big')
+    new_message_key_id = struct.pack('>I',viola_room.get_room_message_key_id())
     # our array must be a multiple of 72 bytes
     assert(len(message_key_array) % MESSAGE_KEY_ARRAY_CELL_LEN == 0)
 

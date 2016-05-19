@@ -42,6 +42,7 @@ class ViolaRoom(object):
 
         # This is the key to actually encrypt messages. We don't know it yet.
         self.room_message_key = None
+        self.old_room_message_keys = {}
 
         # And this is its id
         # XXX maybe it is dangerous to have predictable id's?
@@ -67,22 +68,35 @@ class ViolaRoom(object):
         """Return our 'room participant private key'."""
         return self.participant_priv_key
 
-    def set_room_message_key(self, room_message_key, message_id):
+    def set_room_message_key(self, room_message_key, key_id):
         """We got the room message key! Set it!"""
-        self.old_room_message_key = self.room_message_key
+        self.old_room_message_keys[self.room_message_key_id] = self.room_message_key
+        util.debug("Old message key %s" % crypto.get_hexed_key(self.old_room_message_keys.get(key_id)) )
         self.room_message_key = room_message_key
-        self.room_message_key_id = message_id
-        util.debug("Old message key %s" % crypto.get_hexed_key(self.old_room_message_key) )
+        self.room_message_key_id = key_id
 
-    def get_room_message_key(self):
-        if not self.room_message_key:
+    def get_room_message_key(self, key_id=None):
+        # Is the used key our current key?
+        if (not key_id) or (self.room_message_key_id == key_id):
+            # Do we actually have that key?
+            if not self.room_message_key:
+                raise NoMessageKey()
+            return (self.room_message_key, self.room_message_key_id)
+        # If it is not our current key, could it be an old one?
+        elif key_id:
+            found = self.old_room_message_keys.get(key_id)
+            if not found:
+                raise NoMessageKey()
+            else:
+                return (found, key_id)
+        else:
             raise NoMessageKey()
-        return self.room_message_key
 
-    def get_old_room_message_key(self):
-        if not self.old_room_message_key:
-            raise NoMessageKey()
-        return self.old_room_message_key
+#    def get_old_room_message_key(self):
+#        found = self.old_rooms_message_keys.get(
+#        if not self.old_room_message_key:
+#            raise NoMessageKey()
+#        return self.old_room_message_key
 
     def get_room_message_key_id(self):
         return self.room_message_key_id
