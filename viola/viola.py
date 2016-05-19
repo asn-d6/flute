@@ -64,13 +64,6 @@ def handle_room_message_packet(packet_payload, parsed, server):
                                "grey")
         return ""
 
-    # Get room member object based on sender_host nickname:
-    try:
-        room_member = viola_room.get_member(sender_nick)
-    except room.NoSuchMember:
-        util.control_msg("Received ROOM_MESSAGE from %s who is not a room member. Ignoring." % sender_host)
-        return ""
-
     payload = base64.b64decode(packet_payload)
 
     if len(payload) <= 64:
@@ -81,14 +74,6 @@ def handle_room_message_packet(packet_payload, parsed, server):
     # Get packet fields
     signature = payload[:SIG_LEN]
     message_ciphertext = payload[SIG_LEN:]
-
-    # Verify signature
-    verify_key = room_member.get_identity_pubkey()
-    try:
-        verify_key.verify(payload) # XXX put this in crypto.py
-    except nacl.exceptions.BadSignatureError:
-        util.control_msg("Could not verify signature of ROOM_MESSAGE by %s" % sender_host)
-        return ""
 
     # XXX catch decrypt exception
     try:
