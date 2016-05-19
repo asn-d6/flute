@@ -22,7 +22,7 @@ ROOM_JOIN_OPCODE = "01"
 KEY_TRANSPORT_OPCODE = "02"
 ROOM_MESSAGE_OPCODE = "03"
 
-IRC_MAXIMUM_MESSAGE_SIZE = 420 # XXX
+IRC_MAXIMUM_MESSAGE_SIZE = 399 # XXX figure out the right size here.
 
 SIG_LEN = 64 # bytes per ed25519 sig
 PUBKEY_LEN = 32 # bytes per ed25519/curve25519 key
