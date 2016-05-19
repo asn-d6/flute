@@ -18,7 +18,10 @@ DISCLAIMER:
 
     You also need to have PyNaCl installed on your system. On Debian testing
     you can install by running: # apt-get install python-nacl
-    Alernatively, you can use the pip package manager. Or you can build from source.
+
+    Alernatively, you can use the pip package manager or build from source. For
+    instructions on how to install pynacl without root, see the "Miscellaneous"
+    section of the HACKING file.
 
 - Installing viola:
 

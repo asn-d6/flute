@@ -120,6 +120,23 @@
   Unfortunately, because of weechat and PyNaCl limitations you can't call
   /start twice to restart viola. You instead need to restart weechat...
 
+============= Miscellaneous ================================================
+
+  Here are some Debian instructions for installing Viola without root access:
+
+$ mkdir -p .local
+$ cd .local
+$ apt-get download libffi-dev libffi6
+$ dpkg -x libffi-dev*.deb .
+$ dpkg -x libffi .
+$ export CPATH="`pwd`/usr/lib/x86_64-linux-gnu/" # make gcc happy: include libffi.h
+$ export LIBRARY_PATH="$CPATH" # make ld happy: ld -lffi
+$ export PKG_CONFIG_PATH="`pwd`/usr/lib/x86_64-linux-gnu/" # make pkg-config happy
+$ pip install --user pynacl # install the python bindings to .local/lib/
+$ python -m nacl.public # test that it worked
+
+  Thanks to joe for the instructions.
+
 
 
 
