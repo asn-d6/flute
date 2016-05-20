@@ -4,6 +4,39 @@ import crypto
 import util
 import viola
 
+class RoomMessageKeyCache(object):
+    def __init__(self):
+        self.cached_keys = {}
+        self.current_key = None
+        self.current_keyid = 0
+
+    def submit_key(self, key, key_id):
+        self.cached_keys[self.current_keyid] = self.current_key
+        self.cached_keys = { k : v for k,v in self.cached_keys.items() if k > key_id - 5}
+
+        self.current_key = key
+        self.current_keyid = key_id
+
+    def get_key(self, key_id):
+        if (not key_id) or (self.current_keyid == key_id):
+            if not self.current_key:
+                raise NoMessageKey()
+            return (self.current_key, self.current_keyid)
+        elif key_id:
+            found = self.cached_keys.get(key_id)
+            if not found:
+                raise NoMessageKey()
+            else:
+                return (found, key_id)
+        else:
+            raise NoMessageKey()
+
+    def get_current_key(self):
+        return self.current_key
+
+    def get_current_keyid(self):
+        return self.current_keyid
+
 class RoomMember(object):
     """Represents the member of a Viola room."""
     def __init__(self, nickname, identity_pubkey, room_pubkey):
@@ -40,13 +73,8 @@ class ViolaRoom(object):
         self.participant_priv_key = None
         self.generate_room_key()
 
-        # This is the key to actually encrypt messages. We don't know it yet.
-        self.room_message_key = None
-        self.old_room_message_keys = {}
-
-        # And this is its id
-        # XXX maybe it is dangerous to have predictable id's?
-        self.room_message_key_id = 0
+        # This is the cache that holds the room keys
+        self.key_cache = RoomMessageKeyCache()
 
         # A pointer to the weechat IRC buffer this room is in. XXX terrible abstraction
         self.buf = buf
@@ -70,36 +98,13 @@ class ViolaRoom(object):
 
     def set_room_message_key(self, room_message_key, key_id):
         """We got the room message key! Set it!"""
-        self.old_room_message_keys[self.room_message_key_id] = self.room_message_key
-        util.debug("Old message key %s" % crypto.get_hexed_key(self.old_room_message_keys.get(key_id)) )
-        self.room_message_key = room_message_key
-        self.room_message_key_id = key_id
+        self.key_cache.submit_key(room_message_key, key_id)
 
     def get_room_message_key(self, key_id=None):
-        # Is the used key our current key?
-        if (not key_id) or (self.room_message_key_id == key_id):
-            # Do we actually have that key?
-            if not self.room_message_key:
-                raise NoMessageKey()
-            return (self.room_message_key, self.room_message_key_id)
-        # If it is not our current key, could it be an old one?
-        elif key_id:
-            found = self.old_room_message_keys.get(key_id)
-            if not found:
-                raise NoMessageKey()
-            else:
-                return (found, key_id)
-        else:
-            raise NoMessageKey()
-
-#    def get_old_room_message_key(self):
-#        found = self.old_rooms_message_keys.get(
-#        if not self.old_room_message_key:
-#            raise NoMessageKey()
-#        return self.old_room_message_key
+        return self.key_cache.get_key(key_id)
 
     def get_room_message_key_id(self):
-        return self.room_message_key_id
+        return self.key_cache.get_current_keyid()
 
     def add_member(self, nickname, identity_pubkey, room_pubkey):
         """Add member to viola room."""
@@ -139,21 +144,18 @@ class ViolaRoom(object):
         """
 
         assert(self.i_am_captain)
-        #self.old_room_message_key = self.room_message_key
-        #self.room_message_key = crypto.gen_symmetric_key() # XXX
-        #self.room_message_key_id += 1
         self.set_room_message_key(crypto.gen_symmetric_key(),
-                                  (self.room_message_key_id + 1) % 2**8)
+                                  (self.key_cache.get_current_keyid() + 1) % 2**32)
 
         util.debug("Generated new room message key for %s: %s" %
-                   (self.name, crypto.get_hexed_key(self.room_message_key)))
+                   (self.name, crypto.get_hexed_key(self.key_cache.get_current_key())))
 
         message_key_array = []
 
         for member in self.members.values():
             # Encrypt the room message key for each member.
             key_ciphertext = member.get_message_key_ciphertext(self.participant_priv_key,
-                                                               self.room_message_key)
+                                                               self.key_cache.get_current_key())
             assert(len(key_ciphertext) == 32 + 40) # XXX
             message_key_array.append(key_ciphertext)
 
@@ -174,7 +176,7 @@ class ViolaRoom(object):
 
     def is_active(self):
         """Return True if this channel has been initialized and is active."""
-        return self.room_message_key # XXX use the FSM of the room
+        return self.key_cache.get_current_key() # XXX use the FSM of the room
 
 class NoMessageKey(Exception): pass
 class NoSuchMember(Exception): pass

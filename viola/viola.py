@@ -85,16 +85,10 @@ def handle_room_message_packet(packet_payload, parsed, server):
     try:
         plaintext = crypto.decrypt_room_message(room_message_key, message_ciphertext)
     except nacl.exceptions.CryptoError:
-        util.debug("Got unintelligible message. Attempting to decrypt with old room key!")
-        try:
-            old_message_key = viola_room.get_old_room_message_key()
-            plaintext = crypto.decrypt_room_message(old_message_key, message_ciphertext)
-        except nacl.exceptions.CryptoError:
-
-            util.viola_channel_msg(viola_room.buf,
-                                "Could not decrypt message sent in room. Maybe old key. Try rejoining the channel.",
-                                "red") # XXX this won't work
-            return ""
+        util.viola_channel_msg(viola_room.buf,
+                               "Could not decrypt message sent in room. Maybe old key. Try rejoining the channel.",
+                               "red") # XXX this won't work
+        return ""
 
 
 
