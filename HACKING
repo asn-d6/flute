@@ -1,10 +1,10 @@
-============================ How to hack Viola ================================
+============================ How to hack Flute ================================
 
-======= Why modify Viola? ===============================================
+======= Why modify Flute? ===============================================
 
-  Viola is currently an experimental protocol! It doesn't do much, but it's a
+  Flute is currently an experimental protocol! It doesn't do much, but it's a
   playground that you can use to test various ideas and designs for multiparty
-  messaging. For example, you might modify viola to try new UX ideas, or
+  messaging. For example, you might modify flute to try new UX ideas, or
   integrate it with other secure messaging protocols like OTR or Pond. You can
   change the method of authentication, or key exchange. You can try implementing
   leader election algorithms, introducing deniability to the protocol or
@@ -12,12 +12,12 @@
 
   Good designs and ideas should be merged upstream, but having fun is most important!
 
-  This is why this guide will teach you how to modify and experiment with Viola!
+  This is why this guide will teach you how to modify and experiment with Flute!
 
 ======= Experimentation Setup ============================================
 
-  To experiment with Viola, we will setup an IRC server on our local system. We
-  will then setup multiple weechat's to run Viola and connect to the IRC server.
+  To experiment with Flute, we will setup an IRC server on our local system. We
+  will then setup multiple weechat's to run Flute and connect to the IRC server.
 
   The guide is designed for Debian-like systems, but you can probably follow it
   with any Linux distro. This guide will not explain every little detail; it
@@ -40,13 +40,13 @@
   If everything goes well, ircd-hybrid should be listening on 127.0.0.1:6667
   (or the port you specified in ircd.conf).
 
-============= Setting up Viola =================================================
+============= Setting up Flute =================================================
 
-  Now follow the README file to download Viola and its dependencies (pynacl, etc.)
+  Now follow the README file to download Flute and its dependencies (pynacl, etc.)
 
   Run weechat once, so that it creates its config directory at ~/.weechat .
-  Now install Viola to ~/.weechat/ by doing $ make dev-install
-  This will create symlinks of viola into ~/.weechat/python/
+  Now install Flute to ~/.weechat/ by doing $ make dev-install
+  This will create symlinks of flute into ~/.weechat/python/
 
   Now let's configure weechat. While in weechat do the following:
 
@@ -57,16 +57,16 @@
   If all went well, you should be connected to your local IRC server! If it
   doesn't work make sure you got the IP/ports right.
 
-  You can also test your Viola installation by doing:
+  You can also test your Flute installation by doing:
 
-        /script load weechat_viola.py
+        /script load weechat_flute.py
 
-  That should load up viola! Make sure it loads and squeaks!!
+  That should load up flute! Make sure it loads and squeaks!!
 
   Now you can also add the /start weechat alias that will automatically load up
-  viola and connect to your test server:
+  flute and connect to your test server:
 
-        /alias add start /script load weechat_viola.py ; /connect test
+        /alias add start /script load weechat_flute.py ; /connect test
 
    So now you can just startup weechat and run /start and you should be set!
 
@@ -76,10 +76,10 @@
 
    This guide won't work if you don't save your configuration!!!
 
-============= More Violas! ======================================================
+============= More Flutes! ======================================================
 
-  Viola is a multiparty messaging protocol, so you need more than one client to
-  experiment! This guide will show you how to setup 3 local viola clients!
+  Flute is a multiparty messaging protocol, so you need more than one client to
+  experiment! This guide will show you how to setup 3 local flute clients!
 
   So assuming you followed the previous section, you should have a good weechat
   installation at .weechat .
@@ -90,7 +90,7 @@
        $ cp -r ~/.weechat ~/.weechatbob
        $ cp -r ~/.weechat ~/.weechatcharlie
 
-  Now you can start up 3 viola clients by doing:
+  Now you can start up 3 flute clients by doing:
 
        $ weechat --dir ~/.weechat
        $ weechat --dir ~/.weechatbob
@@ -109,20 +109,20 @@
 
   You should now have three weechat installations that you can start up and
   bootstrap with the /start command. Each of them has a different nickname, and
-  they all have the viola codebase symlinked into them, so any changes you do
-  to viola will be reflected on weechat after you restart.
+  they all have the flute codebase symlinked into them, so any changes you do
+  to flute will be reflected on weechat after you restart.
 
-  Join an IRC channel, and "start-room" with one viola client. Then join with
+  Join an IRC channel, and "start-room" with one flute client. Then join with
   the others and do "join-room". Bam! Play away!
 
 ============= Issues =======================================================
 
   Unfortunately, because of weechat and PyNaCl limitations you can't call
-  /start twice to restart viola. You instead need to restart weechat...
+  /start twice to restart flute. You instead need to restart weechat...
 
 ============= Miscellaneous ================================================
 
-  Here are some Debian instructions for installing Viola without root access:
+  Here are some Debian instructions for installing Flute without root access:
 
 $ mkdir -p .local
 $ cd .local

@@ -6,8 +6,8 @@ DISCLAIMER:
 
 [*] Introduction:
 
-    Greetings. This is Viola, A multiparty chat protocol implemented on Weechat.
-    Please see viola_spec.txt for the protocol spec.
+    Greetings. This is Flute, A multiparty chat protocol implemented on Weechat.
+    Please see flute_spec.txt for the protocol spec.
 
 [*] Installation:
 
@@ -23,11 +23,11 @@ DISCLAIMER:
     instructions on how to install pynacl without root, see the "Miscellaneous"
     section of the HACKING file.
 
-- Installing viola:
+- Installing flute:
 
-    To install viola, simply run `make install` from the root viola directory.
+    To install flute, simply run `make install` from the root flute directory.
 
-    Alternatively, if you are planning to do viola development, you can try
+    Alternatively, if you are planning to do flute development, you can try
     `make dev-install` which will symlink the files instead of copying them, so
     you don't have to run `make install` everytime you do a change.
 
@@ -39,8 +39,8 @@ DISCLAIMER:
     it without Tor, but I'll let you figure out how to do it. Tor can be
     installed in Debian by doing: # apt-get install tor
 
-    Now launch weechat. We need to set it up so that it connects to the viola
-    server with SSL over Tor. Then we load up viola, and connect to the server.
+    Now launch weechat. We need to set it up so that it connects to the flute
+    server with SSL over Tor. Then we load up flute, and connect to the server.
 
     ---------------------------------------------------------------------------------------
     /server add bacon irc.baconsvin.org/6697
@@ -51,49 +51,49 @@ DISCLAIMER:
 
     /set irc.server.bacon.ssl_verify off    <-- WTF. Baconsvin SSL cert expired... Please only set this for testing.
 
-    /python load weechat_viola.py
+    /python load weechat_flute.py
 
     /connect bacon
-    /j #viola_test
+    /j #flute_test
     ---------------------------------------------------------------------------------------
 
-    If things went fine, you should connect to the server and viola should
+    If things went fine, you should connect to the server and flute should
     print an initialization message to the central weechat buffer.
 
-- Using Viola:
+- Using Flute:
 
 -- Finding friends
 
-    Viola assumes you can securely pass your Viola public key information to
+    Flute assumes you can securely pass your Flute public key information to
     your friends in some manner (e.g. using OTR, or in real life). You can use
-    the "/viola trust-key" command to import keys to your friend list.
+    the "/flute trust-key" command to import keys to your friend list.
 
-    Another way to find friends is to connect to a Viola IRC server, and
+    Another way to find friends is to connect to a Flute IRC server, and
     introduce yourself to them. For example, if you want to introduce yourself
     to the user with nickname alice, do:
 
-             /viola introduction alice
+             /flute introduction alice
 
     After alice accepts your introduction, she can also introduce herself to
     you.  Do this for all your friends so that you have a complete friend list.
 
-    Your friend list is saved on disk (see .weechat/viola/viola_account.friends)
+    Your friend list is saved on disk (see .weechat/flute/flute_account.friends)
 
--- Starting viola rooms
+-- Starting flute rooms
 
     After you have a good friend list, go to an empty channel and do:
 
-           /viola start-room
+           /flute start-room
 
-    This should initialize a new viola room and make you the captain. Then ask
+    This should initialize a new flute room and make you the captain. Then ask
     your friends to join your channel.
 
--- Joining viola rooms
+-- Joining flute rooms
 
-    When your friends join your channel, they also need to join your viola
+    When your friends join your channel, they also need to join your flute
     room. To do so, they just need to type:
 
-          /viola join-room
+          /flute join-room
 
    As long as the joining user's public key is in your friend list, the user
    will be added automatically to the room by you. Otherwise, you need to ask
@@ -102,5 +102,5 @@ DISCLAIMER:
 -- Sending messages
 
    After users have joined your room, you can just send encrypted messages to
-   each other as you normally would. Viola adds indicators when a received
+   each other as you normally would. Flute adds indicators when a received
    message is encrypted or unencrypted.

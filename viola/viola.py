@@ -1,4 +1,4 @@
-""" viola.py : Handles and sends viola packets """
+""" flute.py : Handles and sends flute packets """
 
 import crypto
 import json # for saving state to disk
@@ -14,7 +14,7 @@ import transport
 import introduction
 import accounts
 
-VIOLA_TAG = b'?VLA,'
+FLUTE_TAG = b'?VLA,'
 
 INTRODUCTION_OPCODE = "00"
 ROOM_JOIN_OPCODE = "01"
@@ -43,15 +43,15 @@ def handle_room_message_packet(packet_payload, parsed, server):
         util.debug("Received ROOM_MESSAGE not in channel from %s. Ignoring." % sender_host)
         return ""
 
-    # Is this channel a viola room for us?
+    # Is this channel a flute room for us?
     # XXX Code duplication
     try:
-        viola_room = account.get_viola_room(channel, server)
+        flute_room = account.get_flute_room(channel, server)
     except accounts.NoSuchRoom:
         util.debug("Received ROOM_MESSAGE in a regular channel (%s). Ignoring." % channel)
-        buf = util.get_current_buffer() # XXX weechat API shouldn't polute viola.py
-        util.viola_channel_msg(buf,
-                               "[You hear a viola screeching... Please do '/viola join-room' to join the session.]",
+        buf = util.get_current_buffer() # XXX weechat API shouldn't polute flute.py
+        util.flute_channel_msg(buf,
+                               "[You hear a flute screeching... Please do '/flute join-room' to join the session.]",
                                "lightcyan")
         return ""
 
@@ -69,9 +69,9 @@ def handle_room_message_packet(packet_payload, parsed, server):
 
     # Decrypt ciphertext
     try:
-        plaintext = viola_room.decrypt_room_message(message_ciphertext)
+        plaintext = flute_room.decrypt_room_message(message_ciphertext)
     except room.MessageDecryptFail:
-        util.viola_channel_msg(viola_room.buf,
+        util.flute_channel_msg(flute_room.buf,
                                "Could not decrypt message sent in room. Maybe old key. Try rejoining the channel.",
                                color="red")
         return ""
@@ -95,10 +95,10 @@ def handle_key_transport_packet(packet_payload, parsed, server):
         util.debug("Received KEY_TRANSPORT not in channel from %s. Ignoring." % sender)
         return ""
 
-    # Is this channel a viola room for us?
+    # Is this channel a flute room for us?
     # XXX Code duplication
     try:
-        viola_room = account.get_viola_room(channel, server)
+        flute_room = account.get_flute_room(channel, server)
     except accounts.NoSuchRoom:
         util.debug("Received KEY_TRANSPORT in a regular channel (%s). Ignoring." % channel)
         return ""
@@ -108,7 +108,7 @@ def handle_key_transport_packet(packet_payload, parsed, server):
     if len(payload) < MINIMUM_KEY_TRANSPORT_PAYLOAD_LEN:
         raise IncompletePacket
 
-    if viola_room.i_am_captain:
+    if flute_room.i_am_captain:
         util.debug("Received KEY_TRANSPORT in %s by %s but I am captain! Ignoring." % (channel, sender))
         return ""
 
@@ -132,15 +132,15 @@ def handle_key_transport_packet(packet_payload, parsed, server):
         captain_friend_name = account.get_friend_from_identity_key(captain_identity_pubkey)
     except accounts.IdentityKeyNotTrusted:
         hexed_captain_key = crypto.get_hexed_key(captain_identity_pubkey)
-        buf = viola_room.buf
-        util.viola_channel_msg(buf, "Untrusted nickname %s is the captain of this channel with key: %s" % (sender, hexed_captain_key),
+        buf = flute_room.buf
+        util.flute_channel_msg(buf, "Untrusted nickname %s is the captain of this channel with key: %s" % (sender, hexed_captain_key),
                                color="red")
-        util.viola_channel_msg(buf, "Ignoring KEY_TRANSPORT by untrusted captain. If you trust that key and "
+        util.flute_channel_msg(buf, "Ignoring KEY_TRANSPORT by untrusted captain. If you trust that key and "
                                "you want to join the channel, please issue the following command and rejoin:\n"
-                               "\t /viola trust-key <name> %s\n"
+                               "\t /flute trust-key <name> %s\n"
                                "where <name> is the nickname you want to assign to the key."  % hexed_captain_key,
                                color="red")
-        util.viola_channel_msg(buf, "Example: /viola trust-key alice %s" % hexed_captain_key,
+        util.flute_channel_msg(buf, "Example: /flute trust-key alice %s" % hexed_captain_key,
                                color="red")
         return ""
 
@@ -151,28 +151,28 @@ def handle_key_transport_packet(packet_payload, parsed, server):
     if new_key_counter < 1:
         util.debug("Corrupted key counter %d" % new_key_counter)
         return ""
-    if viola_room.key_transport_is_replay(new_key_counter):
+    if flute_room.key_transport_is_replay(new_key_counter):
         return ""
 
     # Try to decrypt the message key array
     try:
         room_message_key = crypto.decrypt_room_message_key(encrypted_message_key_array,
                                                            captain_transport_pubkey,
-                                                           viola_room.get_room_participant_privkey())
+                                                           flute_room.get_room_participant_privkey())
     except crypto.NoKeyFound:
         util.debug("Received KEY_TRANSPORT but did not find my key. Fuck.")
         return ""
 
     # We got the room message key!
-    viola_room.set_room_message_key(room_message_key, new_key_counter)
-    viola_room.status = "done"
+    flute_room.set_room_message_key(room_message_key, new_key_counter)
+    flute_room.status = "done"
 
     # We found our captain. Add them to the room!
     # XXX careful not to double-add the captain in case of rekey
-    viola_room.add_member(sender, captain_identity_pubkey, captain_transport_pubkey)
+    flute_room.add_member(sender, captain_identity_pubkey, captain_transport_pubkey)
 
     # Print some messages to the user
-    buf = util.viola_channel_msg(viola_room.buf, "Got room key for %s with captain %s!" % (channel, sender))
+    buf = util.flute_channel_msg(flute_room.buf, "Got room key for %s with captain %s!" % (channel, sender))
     util.debug("Got a new room message key from captain %s: %s" % \
                (sender, crypto.get_hexed_key(room_message_key)))
 
@@ -189,9 +189,9 @@ def handle_room_join_packet(packet_payload, parsed, server):
         util.debug("Received ROOM_JOIN not in channel from %s. Ignoring." % sender_nick)
         return ""
 
-    # Is this channel a viola room for us?
+    # Is this channel a flute room for us?
     try:
-        viola_room = account.get_viola_room(channel, server)
+        flute_room = account.get_flute_room(channel, server)
     except accounts.NoSuchRoom:
         util.debug("Received ROOM_JOIN in a regular channel (%s). Ignoring." % channel)
         return ""
@@ -211,49 +211,49 @@ def handle_room_join_packet(packet_payload, parsed, server):
     identity_pubkey.verify(payload)
 
     # XXX should we add all members even if we don't know them?
-    viola_room.add_member(sender_nick, identity_pubkey, room_pubkey)
+    flute_room.add_member(sender_nick, identity_pubkey, room_pubkey)
 
     # No need to do anything more if we are not captain in this channel.
-    if not viola_room.i_am_captain:
+    if not flute_room.i_am_captain:
         util.debug("Received ROOM_JOIN in %s but not captain. Ignoring." % channel)
         return ""
 
-    util.debug("Received ROOM_JOIN in %s. Sending KEY_TRANSPORT (%d members)!" % (channel, len(viola_room.members)))
+    util.debug("Received ROOM_JOIN in %s. Sending KEY_TRANSPORT (%d members)!" % (channel, len(flute_room.members)))
 
     # We are the captain. Check if we trust this key. Reject member otherwise.
     try:
         joining_friend_name = account.get_friend_from_identity_key(identity_pubkey)
     except accounts.IdentityKeyNotTrusted:
-        buf = viola_room.buf
-        util.viola_channel_msg(buf, "%s nickname %s is trying to join the channel with key %s." %
+        buf = flute_room.buf
+        util.flute_channel_msg(buf, "%s nickname %s is trying to join the channel with key %s." %
                                (otrlib.colorize("Untrusted", "red"), sender_nick,
                                 crypto.get_hexed_key(identity_pubkey)), "red")
-        util.viola_channel_msg(buf, "If you trust that key and you want them to join the channel, "
+        util.flute_channel_msg(buf, "If you trust that key and you want them to join the channel, "
                                "please issue the following command and ask them to rejoin the channel:\n"
-                               "\t /viola trust-key <name> %s\n"
+                               "\t /flute trust-key <name> %s\n"
                                "where <name> is the nickname you want to assign to the key."  %
                                crypto.get_hexed_key(identity_pubkey), "red")
 
-        util.viola_channel_msg(buf, "Example: /viola trust-key alice %s" % crypto.get_hexed_key(identity_pubkey), "red")
+        util.flute_channel_msg(buf, "Example: /flute trust-key alice %s" % crypto.get_hexed_key(identity_pubkey), "red")
         return ""
 
     # XXX Security: Maybe we should ask the captain before autoadding them!
-    buf = viola_room.buf
-    util.viola_channel_msg(buf, "Friend '%s' was added to the viola room!" % joining_friend_name)
+    buf = flute_room.buf
+    util.flute_channel_msg(buf, "Friend '%s' was added to the flute room!" % joining_friend_name)
 
     # We are captains in the channel. Act like it!
     # There is a new room member! Refresh and send new key!
-    send_key_transport_packet(viola_room)
+    send_key_transport_packet(flute_room)
     return ""
 
 
-def handle_viola_packet(packet, parsed, server):
+def handle_flute_packet(packet, parsed, server):
     """
-    Handle a generic viola packet. Parse its opcode and call the correct
+    Handle a generic flute packet. Parse its opcode and call the correct
     function for this specific type of packet.
     """
 
-    util.debug("Parsing viola packet.")
+    util.debug("Parsing flute packet.")
 
     # XXX terrible functionify
     opcode = packet[:2]
@@ -268,13 +268,13 @@ def handle_viola_packet(packet, parsed, server):
     elif opcode == "03":
         msg = handle_room_message_packet(packet_payload, parsed, server)
     else:
-        util.debug("Received viola packet with opcode: %s" % opcode)
+        util.debug("Received flute packet with opcode: %s" % opcode)
         raise NotImplementedError("wtf")
 
     return msg
 
 def forward_received_unencrypted_msg_to_user(parsed, server):
-    """We received a regular IRC message that has nothing to do with Viola.
+    """We received a regular IRC message that has nothing to do with Flute.
     Mark as unencrypted and forward to user"""
     sender = parsed['from']
     channel = parsed['to_channel']
@@ -293,48 +293,48 @@ def received_irc_msg_cb(irc_msg, server):
 
     parsed = otrlib.parse_irc_privmsg(irc_msg, server)
 
-    # Check whether the received message is a viola message
+    # Check whether the received message is a flute message
     msg = parsed['text']
     try:
-        msg.index(VIOLA_TAG)
-    except ValueError: # Not a viola message. Treat as plaintext and forward.
+        msg.index(FLUTE_TAG)
+    except ValueError: # Not a flute message. Treat as plaintext and forward.
         return forward_received_unencrypted_msg_to_user(parsed, server)
 
-    complete_packet = transport.accumulate_viola_fragment(msg, parsed, server)
+    complete_packet = transport.accumulate_flute_fragment(msg, parsed, server)
     if not complete_packet: # Need to collect more fragments!
         return ""
 
-    # We reconstructed a fragmented viola message! Handle it!
-    return handle_viola_packet(complete_packet, parsed, server)
+    # We reconstructed a fragmented flute message! Handle it!
+    return handle_flute_packet(complete_packet, parsed, server)
 
 def handle_outgoing_irc_msg_to_channel(parsed, server):
-    """We are about to send 'parsed' to a channel. If the channel is a viola room
+    """We are about to send 'parsed' to a channel. If the channel is a flute room
     where the room message key is known, encrypt the message and send it
-    directly. Otherwise if no Viola session is going on, return the plaintext
+    directly. Otherwise if no Flute session is going on, return the plaintext
     string that should be output to the channel."""
     channel = parsed['to_channel']
     msg = parsed['text']
     account = accounts.get_my_account()
 
     try:
-        viola_room = account.get_viola_room(channel, server)
+        flute_room = account.get_flute_room(channel, server)
     except accounts.NoSuchRoom:
-        util.debug("No viola room at %s. Sending plaintext." % channel)
+        util.debug("No flute room at %s. Sending plaintext." % channel)
         return msg
 
     try:
-        room_message_key = viola_room.get_current_room_message_key()
+        room_message_key = flute_room.get_current_room_message_key()
     except room.NoMessageKey:
         util.debug("No message key at %s. Sending plaintext." % channel) # XXX ???
         return msg
 
-    if not viola_room.status == "done":
+    if not flute_room.status == "done":
         util.debug("Room %s not setup yet. Sending plaintext." % channel) # XXX ???
         return msg
 
     util.debug("Sending encrypted msg to %s" % channel)
 
-    # OK we are in a viola room and we even know the key!
+    # OK we are in a flute room and we even know the key!
     # Send a ROOM_MESSAGE!
     # XXX functionify
     ciphertext = crypto.get_room_message_ciphertext(room_message_key, msg)
@@ -343,7 +343,7 @@ def handle_outgoing_irc_msg_to_channel(parsed, server):
     payload_b64 = base64.b64encode(packet_signed)
 
     msg = ROOM_MESSAGE_OPCODE + payload_b64
-    transport.send_viola_privmsg(server, channel, msg)
+    transport.send_flute_privmsg(server, channel, msg)
 
     return ""
 
@@ -368,21 +368,21 @@ def send_irc_msg_cb(msg, server):
     else:
         return ""
 
-def send_key_transport_packet(viola_room):
-    util.debug("I'm captain in %s: Membership changed. Refreshing message key." % viola_room.name)
+def send_key_transport_packet(flute_room):
+    util.debug("I'm captain in %s: Membership changed. Refreshing message key." % flute_room.name)
 
     account = accounts.get_my_account()
-    channel = viola_room.name
-    server = viola_room.server
+    channel = flute_room.name
+    server = flute_room.server
 
-    assert(viola_room.i_am_captain) # Only captains should be here!
+    assert(flute_room.i_am_captain) # Only captains should be here!
 
     # Prepare necessary packet fields.
     captain_identity_key = account.get_identity_pubkey()
-    captain_transport_key = viola_room.get_room_participant_pubkey() # XXX maybe special func for captain's key?
+    captain_transport_key = flute_room.get_room_participant_pubkey() # XXX maybe special func for captain's key?
 
     # XXX get_message_key_array also *generates* a new key. rename.
-    message_key_array, key_transport_counter = viola_room.get_message_key_array_and_counter()
+    message_key_array, key_transport_counter = flute_room.get_message_key_array_and_counter()
     # our array must be a multiple of 72 bytes
     assert(len(message_key_array) % MESSAGE_KEY_ARRAY_CELL_LEN == 0)
     # Encode new key id as big endian unsigned integer
@@ -395,14 +395,14 @@ def send_key_transport_packet(viola_room):
 
     payload_b64 = base64.b64encode(packet_signed)
 
-    viola_room.status = "bootstrapping"
+    flute_room.status = "bootstrapping"
     util.debug("Sending KEY_TRANSPORT in %s!" % channel)
 
     msg_type = KEY_TRANSPORT_OPCODE
     msg = msg_type + payload_b64
-    transport.send_viola_privmsg(server, channel, msg)
+    transport.send_flute_privmsg(server, channel, msg)
 
-    viola_room.status = "done"
+    flute_room.status = "done"
 
 def send_room_join(channel, server, buf):
     """Send ROOM_JOIN message."""
@@ -410,16 +410,16 @@ def send_room_join(channel, server, buf):
 
     # Don't send ROOM_JOIN to empty channel. No one to handle it.
     if util.irc_channel_is_empty(channel, server):
-        util.viola_channel_msg(buf, "Can't 'join-room' in an empty channel!", "red")
-        util.viola_channel_msg(buf, "Do '/viola start-room' if you want to start a new viola room instead.", "red")
+        util.flute_channel_msg(buf, "Can't 'join-room' in an empty channel!", "red")
+        util.flute_channel_msg(buf, "Do '/flute start-room' if you want to start a new flute room instead.", "red")
         return
 
     # First of all, register this new room.
-    viola_room = account.register_viola_room(channel, server, buf)
+    flute_room = account.register_flute_room(channel, server, buf)
 
     # Get the keys to be placed in the packet
     my_pub_key = account.get_identity_pubkey()
-    my_room_key = viola_room.get_room_participant_pubkey()
+    my_room_key = flute_room.get_room_participant_pubkey()
 
     # Sign them
     packet_fields = my_pub_key + my_room_key
@@ -428,25 +428,25 @@ def send_room_join(channel, server, buf):
     payload_b64 = base64.b64encode(packet_signed)
 
     msg = ROOM_JOIN_OPCODE + payload_b64
-    transport.send_viola_privmsg(server, channel, msg)
+    transport.send_flute_privmsg(server, channel, msg)
 
-    util.viola_channel_msg(buf, "Requested to join room %s..." % channel)
+    util.flute_channel_msg(buf, "Requested to join room %s..." % channel)
 
-def start_viola_room(channel, server, buf):
-    """Start a Viola room in 'channel'@'server' on weechat buffer 'buf'."""
+def start_flute_room(channel, server, buf):
+    """Start a Flute room in 'channel'@'server' on weechat buffer 'buf'."""
     account = accounts.get_my_account()
-    util.debug("Starting a viola session in %s." % channel)
+    util.debug("Starting a flute session in %s." % channel)
 
     # Make sure we are the only nick in the channel otherwise someone else
     # might already be captaining.
     if not util.irc_channel_is_empty(channel, server):
-        util.viola_channel_msg(buf, "Can only start viola session in empty channel!", "red")
-        util.viola_channel_msg(buf, "Try '/viola join-room' in this channel instead.", "red")
+        util.flute_channel_msg(buf, "Can only start flute session in empty channel!", "red")
+        util.flute_channel_msg(buf, "Try '/flute join-room' in this channel instead.", "red")
         return
 
-    account.register_viola_room(channel, server, buf, i_am_captain=True)
+    account.register_flute_room(channel, server, buf, i_am_captain=True)
 
-    util.viola_channel_msg(buf, "We are now the captain in room %s!" % channel)
+    util.flute_channel_msg(buf, "We are now the captain in room %s!" % channel)
 
 def user_left_channel(irc_msg, server):
     """A user left a channel we are in. Remove them from the channel if we are captain."""
@@ -463,13 +463,13 @@ def user_left_channel(irc_msg, server):
     util.debug("Received %s from %s in channel %s." % (command, nick, channel))
 
     try:
-        viola_room = account.get_viola_room(channel, server)
+        flute_room = account.get_flute_room(channel, server)
     except accounts.NoSuchRoom:
-        util.debug("No viola room at %s. Sending plaintext." % channel)
+        util.debug("No flute room at %s. Sending plaintext." % channel)
         return
 
     try:
-        viola_room.remove_member_and_rekey(nick)
+        flute_room.remove_member_and_rekey(nick)
     except room.NoSuchMember:
         util.control_msg("A non-existent nick left the room. WTF.") # XXX i think this also catches ourselves
         return
@@ -490,13 +490,13 @@ def user_got_kicked(irc_msg, server):
     util.debug("%s got kicked from %s by %s." % (target, channel, nick))
 
     try:
-        viola_room = account.get_viola_room(channel, server)
+        flute_room = account.get_flute_room(channel, server)
     except accounts.NoSuchRoom:
-        util.debug("No viola room at %s. Sending plaintext." % channel)
+        util.debug("No flute room at %s. Sending plaintext." % channel)
         return
 
     try:
-        viola_room.remove_member_and_rekey(target)
+        flute_room.remove_member_and_rekey(target)
     except room.NoSuchMember:
         util.control_msg("A non-existent nick left the room. WTF.") # XXX i think this also catches ourselves
 
@@ -516,11 +516,11 @@ def user_quit_irc(irc_msg, server):
 def user_changed_irc_nick(old_nick, new_nick):
     """User changed nickname. Track the change."""
     account = accounts.get_my_account()
-    # A user changed nick: we need to update the viola rooms.
+    # A user changed nick: we need to update the flute rooms.
     account.user_changed_nick(old_nick, new_nick)
 
 def rekey_room(metadata):
-    """Extract channel/server from metadata and rekey viola room."""
+    """Extract channel/server from metadata and rekey flute room."""
 
     # Get channel/server from metadata
     splited_room_id = metadata.split(',')
@@ -529,16 +529,16 @@ def rekey_room(metadata):
 
     util.debug("Attempting to rekey room %s..." % room)
 
-    # Find the right viola room
+    # Find the right flute room
     account = accounts.get_my_account()
     try:
-        viola_room = account.get_viola_room(room, server)
+        flute_room = account.get_flute_room(room, server)
     except accounts.NoSuchRoom:
         util.debug("Tried to rekey unknown room %s..." % room)
         return
 
     # Rekey room!
-    viola_room.rekey()
+    flute_room.rekey()
 
-class ViolaCommandError(Exception): pass
+class FluteCommandError(Exception): pass
 class IncompletePacket(Exception): pass

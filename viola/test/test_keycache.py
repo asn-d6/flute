@@ -1,6 +1,6 @@
 import unittest
 
-import viola.keycache
+import flute.keycache
 
 class KeyCacheTest(unittest.TestCase):
     def test_keycache(self):
@@ -8,7 +8,7 @@ class KeyCacheTest(unittest.TestCase):
         We test the key cache by adding some keys and then fetching them.  We also
         test the cleanup procedure for old keys.
         """
-        key_cache = viola.keycache.RoomMessageKeyCache(n_max_keys=5)
+        key_cache = flute.keycache.RoomMessageKeyCache(n_max_keys=5)
 
         # Test key submission
         key_cache.submit_key("123")
@@ -50,7 +50,7 @@ class KeyCacheTest(unittest.TestCase):
         self.assertEqual(oldest_keyid, 4)
 
     def test_key_iterator(self):
-        key_cache = viola.keycache.RoomMessageKeyCache(n_max_keys=5)
+        key_cache = flute.keycache.RoomMessageKeyCache(n_max_keys=5)
         i = 0
 
         self.assertEqual(key_cache.is_empty(), True)

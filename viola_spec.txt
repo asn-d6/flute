@@ -1,6 +1,6 @@
                             Viola Specification
 Protocol version: v0
-                              'One always plays the viola while they drink and chatter...'
+                              'One always plays the flute while they drink and chatter...'
 ---------------------------------------------------------------------------------------
 
 [*] System overview:
@@ -20,17 +20,17 @@ Protocol version: v0
   lots of room for improvement, heuristics and complexity. The challenge is
   figuring out which features and use cases it can support.
 
-  See section [VIOLA-HISTORY] for the past and possible future of the viola protocol.
+  See section [VIOLA-HISTORY] for the past and possible future of the flute protocol.
 
 ---------------------------------------------------------------------------------------
 
 [*] Protocol overview:
 
-  Every viola user has a long-term identity signing key that is used to provide
-  entity authentication when they send viola packets.
+  Every flute user has a long-term identity signing key that is used to provide
+  entity authentication when they send flute packets.
 
-  The viola protocol does not use a (multiparty) key exchange protocol to
-  generate group encryption keys. Instead the viola protocol uses a room
+  The flute protocol does not use a (multiparty) key exchange protocol to
+  generate group encryption keys. Instead the flute protocol uses a room
   captain and a key transport protocol to ship encryption keys to the room
   participants:
 
@@ -40,7 +40,7 @@ Protocol version: v0
   key that will be used in the key transport protocol. The captain then
   generates a fresh group symmetric key, encrypts it using the joining member's
   ephemeral public key and sends the ciphertext to room. The new member
-  decrypts the group symmetric key and uses it to send messages to the viola
+  decrypts the group symmetric key and uses it to send messages to the flute
   room.
 
   The room gets teared down when the captain exits the room or goes offline.
@@ -52,13 +52,13 @@ Protocol version: v0
   A basic Viola user workflow is as follows:
 
   Step 0) Alice collects the public identity keys of her friends' and adds them
-          to her viola friends database.
+          to her flute friends database.
 
-  Step 1) Alice joins an empty IRC channel and issues a viola "start-room" command
+  Step 1) Alice joins an empty IRC channel and issues a flute "start-room" command
           to turn the channel into a Viola room and become the room captain.
 
   Step 2) She then invites her friends to enter the channel and issue the
-          "join-room" command to join the viola room.
+          "join-room" command to join the flute room.
 
   Step 3) As her friends join, Alice the room captain is tasked with generating
           symmetric group keys and transporting them securely to the room participants.
@@ -73,10 +73,10 @@ Protocol version: v0
   - Alice works in an evil factory. She needs to privately speak to her
     coworkers about the abuse she is experiencing. One day in her shift, she
     hands strips of paper with her Viola public key to her coworkers. She tells
-    them to meet tonight at 21:00 in a viola room.
+    them to meet tonight at 21:00 in a flute room.
 
-    Alice at 20:55 uses Viola to visit the viola room, and announces herself as
-    the captain of the channel. At 21:00, her friends start to join the viola
+    Alice at 20:55 uses Viola to visit the flute room, and announces herself as
+    the captain of the channel. At 21:00, her friends start to join the flute
     room. For every new member, Alice generates and passes group keys to them
     in an end-to-end secure manner. Her friends can verify that it's actually
     her because they know her Viola public key. After the discussion finishes,
@@ -91,7 +91,7 @@ Protocol version: v0
     story, Bob and his friends meet in the Viola room and have a secure
     stimulating conversation.
 
-  These are just some example use cases where viola can be useful. In the
+  These are just some example use cases where flute can be useful. In the
   future, and as the protocol evolves, more use cases will be possible.
 
 -------------------------------------------------------------------------------------
@@ -182,7 +182,7 @@ Protocol version: v0
 
   Alice enters an empty IRC channel, initializes a Viola room and becomes its captain.
 
-  Command: /viola start-room
+  Command: /flute start-room
 
   This command turns Alice into the room captain and forces her to monitor the
   channel for new users. This command does not actually send any Viola packets
@@ -194,13 +194,13 @@ Protocol version: v0
 
 -------------------------------------------------------------------------------------
 
-[!] Bob joins the viola room:
+[!] Bob joins the flute room:
 
-  Command: /viola join-room
+  Command: /flute join-room
 
-  Bob joins the viola room taking place in the current channel.
+  Bob joins the flute room taking place in the current channel.
 
-  When Bob joins the viola room, he generates an ephemeral "room participant key"
+  When Bob joins the flute room, he generates an ephemeral "room participant key"
   just for this session. He then advertises his ephemeral room participant key
   and his long term identity key to the rest of the room:
 
@@ -218,7 +218,7 @@ Protocol version: v0
   When Alice the captain receives a ROOM_JOIN packet from a new member, she
   first needs to verify the packet signature and make sure it's coming from a
   trusted friend. After doing so, Alice sends a KEY_TRANSPORT packet that
-  introduces the new member to the viola room.
+  introduces the new member to the flute room.
 
 -------------------------------------------------------------------------------------
 
@@ -276,10 +276,10 @@ Protocol version: v0
 
 -------------------------------------------------------------------------------------
 
-[!] Bob sends an encrypted message to the viola room:
+[!] Bob sends an encrypted message to the flute room:
 
   Bob retrieved the 'room message key' from a KEY_TRANSPORT packet and now
-  wants to send a 'message' to the viola room.
+  wants to send a 'message' to the flute room.
 
   He first computes the ciphertext of his 'message' using the room message key:
 
@@ -312,7 +312,7 @@ Protocol version: v0
 
   This is an in-band way for Alice to pass her long-term public key to her peers.
 
-  Command: /viola introduction bob
+  Command: /flute introduction bob
 
   Alice -> Bob: (INTRODUCTION) (opcode: 00)
 
@@ -337,7 +337,7 @@ Protocol version: v0
 [!] Identity validation
 
   The room captain MUST trust the identity key of any user that requests to
-  join a viola room. Other room participants don't need to trust the identity
+  join a flute room. Other room participants don't need to trust the identity
   key of newly added members.
 
   Viola users who request to join a channel, MUST trust the identity of the
@@ -352,7 +352,7 @@ Protocol version: v0
 
 [!] Key overlap
 
-  It's quite likely that in busy viola rooms, where multiple people join and
+  It's quite likely that in busy flute rooms, where multiple people join and
   leave at the same time, there will be race conditions on the KEY_TRANSPORT
   packets.
 
@@ -366,14 +366,14 @@ Protocol version: v0
   with the latest room message key, participants should trial-decrypt it with
   older message keys.
 
-[!] Members leaving viola rooms
+[!] Members leaving flute rooms
 
   When Alice the captain sees a room participant leaving the IRC channel,
   disconnecting from the server, or getting kicked, she issues a new
   KEY_TRANSPORT command with a fresh room message key that does not include the
   party that left.
 
-  If the captain of a viola room leaves the IRC channel, issues a ROOM_LEAVE
+  If the captain of a flute room leaves the IRC channel, issues a ROOM_LEAVE
   command or disconnects from the server, the other room participants need to
   be informed about this with an error message.
   [XXX how do people know who the captain is?]
@@ -408,7 +408,7 @@ Protocol version: v0
 
   As a corollary of the above, the room captain is the only person in the room
   who actually knows the real member list of the room. Everyone knows who is in
-  the IRC channel, but only the captain knows who actually has the same viola
+  the IRC channel, but only the captain knows who actually has the same flute
   room message key. For example, the captain could be filling the KEY_TRANSPORT
   packet with fake values to make the room appear more populated than it is.
   [TODO: maybe there is a crypto solution to this, if we add a ROOM_JOINED key
@@ -461,7 +461,7 @@ Protocol version: v0
   decrypt.
 
   Another possible race condition is two people doing "start-room"
-  simultaneously and both of them becoming captains of a viola room. Viola
+  simultaneously and both of them becoming captains of a flute room. Viola
   currently refuses to "start-room" if the IRC channel is populated, but it can
   also happen that both captains see the channel empty even though it's
   populated (especially with federated IRC servers, etc.)

@@ -1,5 +1,5 @@
 class RoomMessageKeyCache(object):
-    """Holds room message keys for a viola room."""
+    """Holds room message keys for a flute room."""
     def __init__(self, n_max_keys):
         """Dictionary: { <keyid> : <cached key> }"""
         self.cached_keys = {}

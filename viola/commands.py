@@ -1,9 +1,9 @@
-"""commands.py: Functions that handle the weechat "/viola" commands"""
+"""commands.py: Functions that handle the weechat "/flute" commands"""
 
 import util
 import otrlib
 import introduction
-import viola
+import flute
 import accounts
 
 def start_room_cmd(parsed_args, buf):
@@ -12,7 +12,7 @@ def start_room_cmd(parsed_args, buf):
     server  = util.get_local_server(buf)
 
     # Become leader of channel
-    viola.start_viola_room(channel, server, buf)
+    flute.start_flute_room(channel, server, buf)
 
 def introduction_cmd(parsed_args, buf):
     account = accounts.get_my_account()
@@ -30,11 +30,11 @@ def introduction_cmd(parsed_args, buf):
             target_nick = util.get_local_channel(buf)
         else:
             util.control_msg("Bad introduction command! Can't introduce yourself to a channel!")
-            raise viola.ViolaCommandError
+            raise flute.FluteCommandError
 
     introduction.send_introduction(account, target_nick, server, buf)
 
-    util.viola_channel_msg(buf,
+    util.flute_channel_msg(buf,
                            "[Introduced ourselves to %s.]" % target_nick,
                            color="green")
 
@@ -43,7 +43,7 @@ def join_room_cmd(parsed_args, buf):
     channel = util.get_local_channel(buf)
     server  = util.get_local_server(buf)
 
-    viola.send_room_join(channel, server, buf)
+    flute.send_room_join(channel, server, buf)
 
 def list_friends_cmd():
     account = accounts.get_my_account()
@@ -56,11 +56,11 @@ def trust_key_cmd(parsed_args, buf):
     # Check for illegal nickname chars
     if not nickname.isalnum():
         util.control_msg("Invalid nickname: %s" % nickname)
-        raise viola.ViolaCommandError
+        raise flute.FluteCommandError
 
     if len(hexed_key) != 64 or not util.is_hex(hexed_key):
         util.control_msg("Invalid key value: %s" % hexed_key)
-        raise viola.ViolaCommandError
+        raise flute.FluteCommandError
 
     account = accounts.get_my_account()
     account.trust_key(nickname, hexed_key)

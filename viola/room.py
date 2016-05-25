@@ -1,13 +1,13 @@
-""" room.py : Code that manages Viola rooms and their members """
+""" room.py : Code that manages Flute rooms and their members """
 
 import crypto
 import util
-import viola
+import flute
 import keycache
 import weechat
 
 class RoomMember(object):
-    """Represents the member of a Viola room."""
+    """Represents the member of a Flute room."""
     def __init__(self, nickname, identity_pubkey, room_pubkey):
         self.nickname = nickname
         self.identity_pubkey = identity_pubkey
@@ -39,8 +39,8 @@ def schedule_periodic_room_rekey(channel, server):
                        "rekey_timer_cb",
                        channel + ',' + server)
 
-class ViolaRoom(object):
-    """Represents a Viola room"""
+class FluteRoom(object):
+    """Represents a Flute room"""
     def __init__(self, channel_name, server, buf, i_am_captain):
         self.name = channel_name
         self.server = server
@@ -93,7 +93,7 @@ class ViolaRoom(object):
 
     def key_transport_is_replay(self, new_key_counter):
         if new_key_counter <= self.key_transport_counter:
-            util.viola_channel_msg(self.buf,
+            util.flute_channel_msg(self.buf,
                                    "Received replayed KEY_TRANSPORT packet (%d / %d)" % \
                                    (new_key_counter, self.key_transport_counter),
                                    color="red")
@@ -102,13 +102,13 @@ class ViolaRoom(object):
         return False
 
     def add_member(self, nickname, identity_pubkey, room_pubkey):
-        """Add member to viola room."""
+        """Add member to flute room."""
         new_member = RoomMember(nickname, identity_pubkey, room_pubkey)
         self.members[nickname] = new_member
         util.debug("Adding new room member %s (members: %s)" % (nickname, str(self.members.keys())))
 
     def remove_member_and_rekey(self, nickname):
-        """Remove member from viola room and send a new KEY_TRANSPORT if required."""
+        """Remove member from flute room and send a new KEY_TRANSPORT if required."""
         if not nickname in self.members:
             raise NoSuchMember
 
@@ -119,7 +119,7 @@ class ViolaRoom(object):
 
         # If we are captains and there are still people in the channel, rekey:
         if self.i_am_captain and self.members:
-                viola.send_key_transport_packet(self) # XXX dirty calling viola.py
+                flute.send_key_transport_packet(self) # XXX dirty calling flute.py
 
     def rekey(self):
         if not self.i_am_captain:
@@ -130,7 +130,7 @@ class ViolaRoom(object):
             return
 
         util.debug("Rekeying for room %s ." % self.name)
-        viola.send_key_transport_packet(self)
+        flute.send_key_transport_packet(self)
 
     def get_member(self, nick):
         if nick not in self.members:
@@ -175,8 +175,8 @@ class ViolaRoom(object):
         # Dont even try decrypting if we don't know the current room message key...
         if self.key_cache.is_empty():
             util.debug("Received ROOM_MESSAGE in %s but no message key. Ignoring." % self.name)
-            util.viola_channel_msg(self.buf,
-                                   "[You hear a viola screeching... Please do '/viola join-room' to join the session.]",
+            util.flute_channel_msg(self.buf,
+                                   "[You hear a flute screeching... Please do '/flute join-room' to join the session.]",
                                    "grey")
             return ""
 

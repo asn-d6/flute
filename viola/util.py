@@ -1,4 +1,4 @@
-""" util.py : General viola utility functions """
+""" util.py : General flute utility functions """
 
 import re
 
@@ -6,11 +6,11 @@ import otrlib
 
 import weechat
 
-# The viola utility buffers
-global VIOLA_DEBUG_BUFFER
-VIOLA_DEBUG_BUFFER = None
-global VIOLA_CONTROL_BUFFER
-VIOLA_CONTROL_BUFFER = None
+# The flute utility buffers
+global FLUTE_DEBUG_BUFFER
+FLUTE_DEBUG_BUFFER = None
+global FLUTE_CONTROL_BUFFER
+FLUTE_CONTROL_BUFFER = None
 
 def get_local_server(buf):
     return otrlib.buffer_get_string(buf, 'localvar_server')
@@ -28,52 +28,52 @@ def prnt(buf, message):
     """Wrap weechat.prnt() with utf-8 encode."""
     weechat.prnt(buf, str(message))
 
-def viola_channel_msg(buf, msg, color="green"):
+def flute_channel_msg(buf, msg, color="green"):
     """
-    Insert a colorized viola message to the buffer 'buf'.
-    This is used for informative viola messages inlined in the room bufer.
+    Insert a colorized flute message to the buffer 'buf'.
+    This is used for informative flute messages inlined in the room bufer.
     """
-    msg = "[Viola] %s" % msg
+    msg = "[Flute] %s" % msg
     prnt(buf, otrlib.colorize(msg, color))
 
-def setup_viola_weechat_buffers():
-    """Initialize the viola control panel and debug buffers."""
-    global VIOLA_DEBUG_BUFFER
-    global VIOLA_CONTROL_BUFFER
+def setup_flute_weechat_buffers():
+    """Initialize the flute control panel and debug buffers."""
+    global FLUTE_DEBUG_BUFFER
+    global FLUTE_CONTROL_BUFFER
 
-    if not VIOLA_CONTROL_BUFFER:
-        VIOLA_CONTROL_BUFFER = weechat.buffer_new(otrlib.colorize("Viola Control Panel", "yellow"),
+    if not FLUTE_CONTROL_BUFFER:
+        FLUTE_CONTROL_BUFFER = weechat.buffer_new(otrlib.colorize("Flute Control Panel", "yellow"),
                                                                   "", "",
                                                                   "debug_buffer_close_cb", "")
 
-        weechat.buffer_set(VIOLA_CONTROL_BUFFER, 'title', 'Viola Control Messages')
+        weechat.buffer_set(FLUTE_CONTROL_BUFFER, 'title', 'Flute Control Messages')
 
-        weechat.buffer_set(VIOLA_CONTROL_BUFFER, 'localvar_set_no_log', '1')
+        weechat.buffer_set(FLUTE_CONTROL_BUFFER, 'localvar_set_no_log', '1')
 
-    if not VIOLA_DEBUG_BUFFER:
-        VIOLA_DEBUG_BUFFER = weechat.buffer_new("Viola Debug", "", "",
+    if not FLUTE_DEBUG_BUFFER:
+        FLUTE_DEBUG_BUFFER = weechat.buffer_new("Flute Debug", "", "",
                                               "debug_buffer_close_cb", "")
-        weechat.buffer_set(VIOLA_DEBUG_BUFFER, 'title', 'Viola Debug')
-        weechat.buffer_set(VIOLA_DEBUG_BUFFER, 'localvar_set_no_log', '1')
+        weechat.buffer_set(FLUTE_DEBUG_BUFFER, 'title', 'Flute Debug')
+        weechat.buffer_set(FLUTE_DEBUG_BUFFER, 'localvar_set_no_log', '1')
 
 def debug(msg):
-    """Send a debug message to the viola debug buffer."""
-    global VIOLA_DEBUG_BUFFER
-    assert(VIOLA_DEBUG_BUFFER)
+    """Send a debug message to the flute debug buffer."""
+    global FLUTE_DEBUG_BUFFER
+    assert(FLUTE_DEBUG_BUFFER)
 
-    prnt(VIOLA_DEBUG_BUFFER, ('{script} DEBUG\t{text}'.format(
-        script="Viola",
+    prnt(FLUTE_DEBUG_BUFFER, ('{script} DEBUG\t{text}'.format(
+        script="Flute",
         text=unicode(msg)
     )))
 
 def control_msg(msg):
-    """Send a message to the viola control panel"""
-    global VIOLA_CONTROL_BUFFER
-    assert(VIOLA_CONTROL_BUFFER)
+    """Send a message to the flute control panel"""
+    global FLUTE_CONTROL_BUFFER
+    assert(FLUTE_CONTROL_BUFFER)
 
-    header = "Viola control panel"
+    header = "Flute control panel"
 
-    prnt(VIOLA_CONTROL_BUFFER, "%s\t%s" % (otrlib.colorize(header, "yellow"), unicode(msg)))
+    prnt(FLUTE_CONTROL_BUFFER, "%s\t%s" % (otrlib.colorize(header, "yellow"), unicode(msg)))
 
 def irc_channel_is_empty(channel, server):
     """Return True if we are the only nick in the channel."""

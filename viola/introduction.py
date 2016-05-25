@@ -1,6 +1,6 @@
 """ introduction.py Handles and sends INTRODUCTION packets. """
 
-import viola
+import flute
 import util
 import base64
 import crypto
@@ -35,9 +35,9 @@ def handle_introduction_packet(packet_payload, parsed):
     util.control_msg("You received an introduction from %s with identity key:" % irc_nick)
     util.control_msg("\t%s" % otrlib.colorize(hexed_key, "green"))
     util.control_msg("If you trust that key, please type:")
-    util.control_msg("\t /viola trust-key <name> %s" % hexed_key)
+    util.control_msg("\t /flute trust-key <name> %s" % hexed_key)
     util.control_msg("where <name> is the nickname you want to assign to the key.")
-    util.control_msg("Example: /viola trust-key alice %s" % hexed_key)
+    util.control_msg("Example: /flute trust-key alice %s" % hexed_key)
     util.control_msg("-" * 100)
 
     return ""
@@ -53,5 +53,5 @@ def send_introduction(account, target_nick, server, buf):
 
     payload_b64 = base64.b64encode(packet_signed)
 
-    msg = viola.INTRODUCTION_OPCODE + payload_b64
-    transport.send_viola_privmsg(server, target_nick, msg)
+    msg = flute.INTRODUCTION_OPCODE + payload_b64
+    transport.send_flute_privmsg(server, target_nick, msg)

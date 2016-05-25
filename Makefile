@@ -1,10 +1,10 @@
 .PHONY: install
 
 install:
-	cp weechat_viola.py $(HOME)/.weechat/python/
-	cp -R viola $(HOME)/.weechat/python/
+	cp weechat_flute.py $(HOME)/.weechat/python/
+	cp -R flute $(HOME)/.weechat/python/
 
 dev-install:
-	ln -s $(CURDIR)/weechat_viola.py $(HOME)/.weechat/python/
-	ln -s $(CURDIR)/viola $(HOME)/.weechat/python/
+	ln -s $(CURDIR)/weechat_flute.py $(HOME)/.weechat/python/
+	ln -s $(CURDIR)/flute $(HOME)/.weechat/python/
 

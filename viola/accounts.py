@@ -1,4 +1,4 @@
-""" accounts.py: Viola user account management """
+""" accounts.py: Flute user account management """
 
 import os
 import util
@@ -7,41 +7,41 @@ import json
 import room
 import otrlib
 
-# TODO Only one viola account for now per weechat  :)
+# TODO Only one flute account for now per weechat  :)
 ACCOUNT = None
-def init_accounts(viola_dir):
+def init_accounts(flute_dir):
     global ACCOUNT
-    ACCOUNT = Account(viola_dir)
+    ACCOUNT = Account(flute_dir)
 
 def get_my_account():
     return ACCOUNT
 
-"""Represents a Viola user account.
-   TODO: In the glorious future, a user should be able to have multiple Viola accounts.
+"""Represents a Flute user account.
+   TODO: In the glorious future, a user should be able to have multiple Flute accounts.
 """
 class Account(object):
-    def __init__(self, viola_dir):
-        # Viola home dir
-        self.viola_dir = viola_dir
+    def __init__(self, flute_dir):
+        # Flute home dir
+        self.flute_dir = flute_dir
 
         # Filenames of disk state
         self.identity_privkey = None
-        self.identity_privkey_fname = self.get_identity_privkey_fname("viola_account") # XXX put account name
-        self.friends_db_fname = self.get_friends_db_fname("viola_account")
+        self.identity_privkey_fname = self.get_identity_privkey_fname("flute_account") # XXX put account name
+        self.friends_db_fname = self.get_friends_db_fname("flute_account")
 
-        # Dictionary of active viola rooms.
-        # e.g. { "#social" : ViolaRoom1 ; "#skateboarding" : ViolaRoom2 }
-        self.active_viola_rooms = {}
+        # Dictionary of active flute rooms.
+        # e.g. { "#social" : FluteRoom1 ; "#skateboarding" : FluteRoom2 }
+        self.active_flute_rooms = {}
 
         # Initialize crypto!
         self.init_crypto()
 
     def get_friends_db_fname(self, account_name):
-        return os.path.join(self.viola_dir, '{}.friends'.format(account_name))
+        return os.path.join(self.flute_dir, '{}.friends'.format(account_name))
 
     def get_identity_privkey_fname(self, account_name):
         """Return the private key file path for an account."""
-        return os.path.join(self.viola_dir, '{}.priv_key'.format(account_name))
+        return os.path.join(self.flute_dir, '{}.priv_key'.format(account_name))
 
     def print_friend_list(self):
         if not os.path.exists(self.friends_db_fname):
@@ -65,31 +65,31 @@ class Account(object):
 
         util.debug("Using identity public key: %s" % crypto.get_hexed_key(self.identity_privkey.verify_key))
 
-    def register_viola_room(self, channel, server, buf, i_am_captain=False):
+    def register_flute_room(self, channel, server, buf, i_am_captain=False):
         """
-        Register viola room on this account. If a room under this channel name
+        Register flute room on this account. If a room under this channel name
         already exists, be careful about overwriting it.
         """
         old_room = None
 
         # If this room already exists and is active, don't register it again.
-        if channel in self.active_viola_rooms:
-            old_room = self.active_viola_rooms[channel]
+        if channel in self.active_flute_rooms:
+            old_room = self.active_flute_rooms[channel]
             if old_room.is_active():
-                util.viola_channel_msg(buf, "Channel %s is already a viola room" % channel) # XXX fix!
-                raise ViolaCommandError
+                util.flute_channel_msg(buf, "Channel %s is already a flute room" % channel) # XXX fix!
+                raise FluteCommandError
 
         # If there used to be a room with this name but we are not overwriting
         # it, remove the old one.
         if old_room:
-            self.active_viola_rooms.pop(channel) # XXX more cleanup?
+            self.active_flute_rooms.pop(channel) # XXX more cleanup?
 
         # Create the room
-        viola_room = room.ViolaRoom(channel, server, buf, i_am_captain)
+        flute_room = room.FluteRoom(channel, server, buf, i_am_captain)
         # and register it.
-        self.active_viola_rooms[channel] = viola_room
+        self.active_flute_rooms[channel] = flute_room
 
-        return viola_room
+        return flute_room
 
     def trust_key(self, nickname, hexed_key):
         """Register trusted key 'hexed_key' under 'nickname'."""
@@ -107,12 +107,12 @@ class Account(object):
         # Print current version of the friend list
         self.print_friend_list()
 
-    def get_viola_room(self, channel, server):
-        """Get viola room based on channel/server"""
-        if channel not in self.active_viola_rooms:
+    def get_flute_room(self, channel, server):
+        """Get flute room based on channel/server"""
+        if channel not in self.active_flute_rooms:
             raise NoSuchRoom
 
-        return self.active_viola_rooms[channel]
+        return self.active_flute_rooms[channel]
 
     def sign_msg_with_identity_key(self, msg):
         return self.identity_privkey.sign(msg)
@@ -144,19 +144,19 @@ class Account(object):
 
     def user_changed_nick(self, old_nick, new_nick):
         """
-        A user changed their nickname. Walk over all the active viola rooms and do
+        A user changed their nickname. Walk over all the active flute rooms and do
         this change.
         """
         # XXX Here we assume that ALL nicks are in one server.
         util.debug("User %s changed nickname to %s. Updating rooms." % (old_nick, new_nick))
-        for room in self.active_viola_rooms.values():
+        for room in self.active_flute_rooms.values():
             room.user_changed_nick(old_nick, new_nick)
 
     def user_quit_irc(self, nick):
         """A user quit IRC. Remove them from all active channels."""
-        for viola_room in self.active_viola_rooms.values():
+        for flute_room in self.active_flute_rooms.values():
             try:
-                viola_room.remove_member_and_rekey(nick)
+                flute_room.remove_member_and_rekey(nick)
             except room.NoSuchMember:
                 continue
 

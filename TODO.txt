@@ -11,7 +11,7 @@
     - A "room-status" command would be nice that prints the current room
       message key, the room member list (or the number of members), the
       member's identity keys and whether they are friends or not.
-    - More informative viola messages. Better coloring. The control panel sucks.
+    - More informative flute messages. Better coloring. The control panel sucks.
     - Better use of the weechat status bar (see what weechat-otr is doing)
     - Better friend management.
 
@@ -20,25 +20,25 @@
 * we really need a good testsuite to test protocol/code changes
   see weechat FIFO queue for weechat integration tests
 
-* use the weechat configuration variables to pass information to viola.
+* use the weechat configuration variables to pass information to flute.
   example options:
           - disable verification of captain (yolo join)
           - disable verification of joining members (yolo room)
 
-* if "/viola start-room" is called in the weechat buffer, make it join a random
+* if "/flute start-room" is called in the weechat buffer, make it join a random
   IRC channel with good default IRC mode (+S etc.), and become the captain there.
 
 * Multiple IRC server support.
 
 * Better isolation of codebase in modules
 
-* UX improvement: Add a captain viola packet that informs users that they got
+* UX improvement: Add a captain flute packet that informs users that they got
       declined when joining a room (because their keys are not trusted, etc.)
 
 * Figure out race conditions with people joining/leaving and the key being updated.
   Busy rooms will probably need clients to keep overlapping message keys.
 
-* Improve viola packet format ( version fields , etc.)
+* Improve flute packet format ( version fields , etc.)
 
 * What to do if two captains in room (two people sending KEY_TRANSPORT)?
 

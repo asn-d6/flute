@@ -1,4 +1,4 @@
-""" crypto.py : Some viola-specific crypto """
+""" crypto.py : Some flute-specific crypto """
 
 import binascii
 import json
@@ -15,7 +15,7 @@ try:
 except nacl.exceptions.CryptoError, msg: # Catch any errors
     print("!!! Failed to import PyNaCl: '%s'" % msg)
     print("!!! Might be caused by https://github.com/pyca/pynacl/issues/186")
-    print("!!! Ignoring error, but no guarantees that viola will work... :(")
+    print("!!! Ignoring error, but no guarantees that flute will work... :(")
 
 # XXX pull in more crypto code in here.
 

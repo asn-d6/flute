@@ -1,14 +1,14 @@
-""" transport.py: Handles the Viola transport format. Fragmentation and stuff."""
+""" transport.py: Handles the Flute transport format. Fragmentation and stuff."""
 
-import viola
+import flute
 import otrlib
 import util
 
 def get_fragments_from_msg(msg):
-    """Chunk 'msg' in viola fragments to be sent to the network."""
+    """Chunk 'msg' in flute fragments to be sent to the network."""
     fragments = []
 
-    fms = viola.IRC_MAXIMUM_MESSAGE_SIZE - 19 # XXX
+    fms = flute.IRC_MAXIMUM_MESSAGE_SIZE - 19 # XXX
     msg_len = len(msg)
 
     chunks = [ msg[i:i+fms] for i in range(0, msg_len, fms) ]
@@ -26,9 +26,9 @@ def get_fragments_from_msg(msg):
 
     return fragments
 
-def send_viola_privmsg(server, nick, message):
+def send_flute_privmsg(server, nick, message):
     """
-    Send a message to a nick or a channel. Split it to viola fragments first,
+    Send a message to a nick or a channel. Split it to flute fragments first,
     and then send it over.
     """
     for line in message.splitlines():
@@ -94,7 +94,7 @@ class IncompleteMessage(object):
             return None
 
 """
-Collects any received Viola fragments, pieces them together and returns
+Collects any received Flute fragments, pieces them together and returns
 them when they are completed.
 """
 class FragmentAssembler(object):
@@ -176,7 +176,7 @@ XXX Attach to accounts.py singleton .
 """
 FRAGMENT_ASSEMBLER = FragmentAssembler()
 
-def accumulate_viola_fragment(fragment, parsed, server):
+def accumulate_flute_fragment(fragment, parsed, server):
     """
     We just received a new fragment. Submit it for assembly.
     If it completes a message, return the message. Otherwise None.

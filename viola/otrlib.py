@@ -1,7 +1,7 @@
 # Code stolen from weechat_otr.py. Lightly modified and salted.
 
 import weechat
-import viola
+import flute
 
 
 IRC_SANITIZE_TABLE = dict((ord(char), None) for char in '\n\r\x00')
