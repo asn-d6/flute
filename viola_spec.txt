@@ -226,7 +226,9 @@ Protocol version: v0
 
   When the room captain, Alice, notices a ROOM_JOIN packet in the channel from
   a new participant, she needs to create a fresh "room message key" and
-  distribute it _securely_ to the room participants.
+  distribute it _securely_ to the room participants. Furthermore, the room
+  captain needs to periodically refresh the room message key, to ensure forward
+  secrecy.
 
   Before doing so Alice creates a fresh curve25519 "transport key". This key
   along with each participant's "room participant key" are used to create a
@@ -252,13 +254,19 @@ Protocol version: v0
        SIGNATURE                                    [64 bytes]
        CAPTAIN_IDENTITY_PUBKEY                      [32 bytes]
        CAPTAIN_TRANSPORT_KEY                        [32 bytes]
+       MESSAGE_KEY_COUNTER                          [4 bytes]
        MESSAGE_KEY_ARRAY                            [72 bytes * MEMBERS]
 
        where SIGNATURE is a signature of all following fields using CAPTAIN_IDENTITY_PRIVKEY.
+       MESSAGE_KEY_COUNTER is a monotonic strictly-positive counter that must be
+       incremented everytime a new KEY_TRANSPORT packet is sent by the captain.
 
   When room members receive the KEY_TRANSPORT packet, they first verify Alice's
-  signature and make sure that they trust it. Then they trial decrypt each cell
-  of the MESSAGE_KEY_ARRAY till they successfuly retrieve the room message key.
+  signature and make sure that they trust it. If they've seen previous
+  KEY_TRANSPORT packets by this captain, they verify that the new
+  MESSAGE_KEY_ID is strictly greater than the old one. Finally they trial
+  decrypt each cell of the MESSAGE_KEY_ARRAY till they successfuly retrieve the
+  room message key.
 
   [XXX what's the best order of ciphertexts in MESSAGE_KEY_ARRAY?]
   [XXX what should receiver do if they receive KEY_TRANSPORT from multiple
@@ -326,7 +334,7 @@ Protocol version: v0
 
 [*] Other protocol behaviors:
 
-[*] Identity validation
+[!] Identity validation
 
   The room captain MUST trust the identity key of any user that requests to
   join a viola room. Other room participants don't need to trust the identity
@@ -341,6 +349,22 @@ Protocol version: v0
   [XXX So everyone needs to trust everyone? Doesn't this suck for large groups?]
   [XXX figure out better UX]
   [XXX check out OTR policies]
+
+[!] Key overlap
+
+  It's quite likely that in busy viola rooms, where multiple people join and
+  leave at the same time, there will be race conditions on the KEY_TRANSPORT
+  packets.
+
+  For example, Alice might send a ROOM_MESSAGE packet right before an upcoming
+  KEY_TRANSPORT packet arrives. Then Bob might receive Alice's packet *after*
+  parsing the KEY_TRANSPORT packet. This will result in Bob trying to decrypt
+  Alice's packet with the wrong room message key.
+
+  To fix these race conditions, participants SHOULD cache old room message keys
+  for a while before deleting them. If a ROOM_MESSAGE packet does not decrypt
+  with the latest room message key, participants should trial-decrypt it with
+  older message keys.
 
 [!] Members leaving viola rooms
 
