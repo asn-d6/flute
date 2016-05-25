@@ -14,15 +14,12 @@ import transport
 import introduction
 import accounts
 
-import nacl.exceptions # XXX dirty
-
 VIOLA_TAG = b'?VLA,'
 
 INTRODUCTION_OPCODE = "00"
 ROOM_JOIN_OPCODE = "01"
 KEY_TRANSPORT_OPCODE = "02"
 ROOM_MESSAGE_OPCODE = "03"
-KEY_TRANSPORT_REKEY_OPCODE = "04"
 
 IRC_MAXIMUM_MESSAGE_SIZE = 399 # XXX figure out the right size here.
 
@@ -30,7 +27,7 @@ SIG_LEN = 64 # bytes per ed25519 sig
 PUBKEY_LEN = 32 # bytes per ed25519/curve25519 key
 SYMMETRIC_KEY_LEN = 32 # bytes per symmetric Box() key
 MESSAGE_KEY_ARRAY_CELL_LEN = 72 # bytes: 32 bytes symmetric key + 40 bytes of nacl overhead
-KEY_ID_LEN = 4
+KEY_ID_LEN = 4 # bytes
 
 #XXX need to verify ROOM_MESSAGE packets with long-term secret!!!
 #XXX what happens if a user does join-room multiple times without leaving the channel
@@ -68,29 +65,19 @@ def handle_room_message_packet(packet_payload, parsed, server):
 
     # Get packet fields
     signature = payload[:SIG_LEN]
-    key_id, = struct.unpack('>I',payload[SIG_LEN: SIG_LEN + KEY_ID_LEN])
-    util.debug("Received keyid is: %s" % str(key_id))
-    message_ciphertext = payload[KEY_ID_LEN + SIG_LEN:]
+    message_ciphertext = payload[SIG_LEN:]
 
+    # Decrypt ciphertext
     try:
-        room_message_key, _ = viola_room.get_room_message_key(key_id)
-    except room.NoMessageKey:
-        util.debug("Received ROOM_MESSAGE in %s but no message key. Ignoring." % channel) # XXX ???
-        util.viola_channel_msg(viola_room.buf,
-                               "[You hear a viola screeching... Please do '/viola join-room' to join the session.]",
-                               "grey")
-        return ""
-
-    # XXX catch decrypt exception
-    try:
-        plaintext = crypto.decrypt_room_message(room_message_key, message_ciphertext)
-    except nacl.exceptions.CryptoError:
+        plaintext = viola_room.decrypt_room_message(message_ciphertext)
+    except room.MessageDecryptFail:
         util.viola_channel_msg(viola_room.buf,
                                "Could not decrypt message sent in room. Maybe old key. Try rejoining the channel.",
-                               "red") # XXX this won't work
+                               color="red")
         return ""
 
-
+    if not plaintext:
+        return ""
 
     msg = "[ENCRYPTED] %s" % plaintext
     msg_in = otrlib.build_privmsg_in(sender_host, channel, msg)
@@ -99,7 +86,7 @@ def handle_room_message_packet(packet_payload, parsed, server):
 
 MINIMUM_KEY_TRANSPORT_PAYLOAD_LEN = SIG_LEN + PUBKEY_LEN*2 + MESSAGE_KEY_ARRAY_CELL_LEN
 
-def handle_key_transport_packet(packet_payload, parsed, server, rekey=False):
+def handle_key_transport_packet(packet_payload, parsed, server):
     sender = parsed['from_nick']
     channel = parsed['to_channel']
     account = accounts.get_my_account()
@@ -136,7 +123,7 @@ def handle_key_transport_packet(packet_payload, parsed, server, rekey=False):
     captain_transport_pubkey = payload[SIG_LEN+PUBKEY_LEN : SIG_LEN+PUBKEY_LEN+PUBKEY_LEN]
     captain_transport_pubkey = crypto.parse_pub_key(captain_transport_pubkey)
 
-    new_key_id, = struct.unpack('>I',payload[SIG_LEN + PUBKEY_LEN + PUBKEY_LEN: SIG_LEN + PUBKEY_LEN + PUBKEY_LEN + KEY_ID_LEN])
+    new_key_counter, = struct.unpack('>I',payload[SIG_LEN + PUBKEY_LEN + PUBKEY_LEN: SIG_LEN + PUBKEY_LEN + PUBKEY_LEN + KEY_ID_LEN])
 
     encrypted_message_key_array = payload[SIG_LEN+PUBKEY_LEN+PUBKEY_LEN + KEY_ID_LEN:]
 
@@ -146,19 +133,15 @@ def handle_key_transport_packet(packet_payload, parsed, server, rekey=False):
     except accounts.IdentityKeyNotTrusted:
         hexed_captain_key = crypto.get_hexed_key(captain_identity_pubkey)
         buf = viola_room.buf
-
-        # If it is not a rekey message notifay the user the the key is
-        # untrusted
-        if not rekey:
-            util.viola_channel_msg(buf, "Untrusted nickname %s is the captain of this channel with key: %s" % (sender, hexed_captain_key),
-                                color="red")
-            util.viola_channel_msg(buf, "Ignoring KEY_TRANSPORT by untrusted captain. If you trust that key and "
-                                "you want to join the channel, please issue the following command and rejoin:\n"
-                                "\t /viola trust-key <name> %s\n"
-                                "where <name> is the nickname you want to assign to the key."  % hexed_captain_key,
-                                color="red")
-            util.viola_channel_msg(buf, "Example: /viola trust-key alice %s" % hexed_captain_key,
-                                color="red")
+        util.viola_channel_msg(buf, "Untrusted nickname %s is the captain of this channel with key: %s" % (sender, hexed_captain_key),
+                               color="red")
+        util.viola_channel_msg(buf, "Ignoring KEY_TRANSPORT by untrusted captain. If you trust that key and "
+                               "you want to join the channel, please issue the following command and rejoin:\n"
+                               "\t /viola trust-key <name> %s\n"
+                               "where <name> is the nickname you want to assign to the key."  % hexed_captain_key,
+                               color="red")
+        util.viola_channel_msg(buf, "Example: /viola trust-key alice %s" % hexed_captain_key,
+                               color="red")
         return ""
 
     # Verify captain signature
@@ -174,21 +157,17 @@ def handle_key_transport_packet(packet_payload, parsed, server, rekey=False):
         return ""
 
     # We got the room message key!
-    viola_room.set_room_message_key(room_message_key, new_key_id)
+    viola_room.set_room_message_key(room_message_key, new_key_counter)
+    viola_room.status = "done"
 
-    # If this was not a rekey message initialize the chatroom
-    # and inform the user we joined the room.
-    if not rekey:
-        viola_room.status = "done"
+    # We found our captain. Add them to the room!
+    # XXX careful not to double-add the captain in case of rekey
+    viola_room.add_member(sender, captain_identity_pubkey, captain_transport_pubkey)
 
-        # We found our captain. Add them to the room!
-        # XXX should we do this here or before the checks?
-        viola_room.add_member(sender, captain_identity_pubkey, captain_transport_pubkey)
-
-        # Print some messages to the user
-        buf = util.viola_channel_msg(viola_room.buf, "Joined room %s with captain %s!" % (channel, sender))
-        util.debug("Got a new room message key from captain %s: %s" % \
-                (sender, crypto.get_hexed_key(room_message_key)))
+    # Print some messages to the user
+    buf = util.viola_channel_msg(viola_room.buf, "Got room key for %s with captain %s!" % (channel, sender))
+    util.debug("Got a new room message key from captain %s: %s" % \
+               (sender, crypto.get_hexed_key(room_message_key)))
 
     return ""
 
@@ -281,9 +260,6 @@ def handle_viola_packet(packet, parsed, server):
         msg = handle_key_transport_packet(packet_payload, parsed, server)
     elif opcode == "03":
         msg = handle_room_message_packet(packet_payload, parsed, server)
-    elif opcode == "04":
-        msg = handle_key_transport_packet(packet_payload, parsed, server, rekey=True)
-
     else:
         util.debug("Received viola packet with opcode: %s" % opcode)
         raise NotImplementedError("wtf")
@@ -340,7 +316,7 @@ def handle_outgoing_irc_msg_to_channel(parsed, server):
         return msg
 
     try:
-        room_message_key, key_id = viola_room.get_room_message_key()
+        room_message_key = viola_room.get_current_room_message_key()
     except room.NoMessageKey:
         util.debug("No message key at %s. Sending plaintext." % channel) # XXX ???
         return msg
@@ -351,12 +327,11 @@ def handle_outgoing_irc_msg_to_channel(parsed, server):
 
     util.debug("Sending encrypted msg to %s" % channel)
 
-    key_id_bytes = struct.pack('>I', key_id)
     # OK we are in a viola room and we even know the key!
     # Send a ROOM_MESSAGE!
     # XXX functionify
     ciphertext = crypto.get_room_message_ciphertext(room_message_key, msg)
-    packet_signed = account.sign_msg_with_identity_key(key_id_bytes + ciphertext)
+    packet_signed = account.sign_msg_with_identity_key(ciphertext)
 
     payload_b64 = base64.b64encode(packet_signed)
 
@@ -386,7 +361,7 @@ def send_irc_msg_cb(msg, server):
     else:
         return ""
 
-def send_key_transport_packet(viola_room, rekey=False):
+def send_key_transport_packet(viola_room):
     util.debug("I'm captain in %s: Membership changed. Refreshing message key." % viola_room.name)
 
     account = accounts.get_my_account()
@@ -398,13 +373,16 @@ def send_key_transport_packet(viola_room, rekey=False):
     # Prepare necessary packet fields.
     captain_identity_key = account.get_identity_pubkey()
     captain_transport_key = viola_room.get_room_participant_pubkey() # XXX maybe special func for captain's key?
-    message_key_array = viola_room.get_message_key_array() # XXX also generates key. rename.
-    new_message_key_id = struct.pack('>I',viola_room.get_room_message_key_id())
+
+    # XXX get_message_key_array also *generates* a new key. rename.
+    message_key_array, key_transport_counter = viola_room.get_message_key_array_and_counter()
     # our array must be a multiple of 72 bytes
     assert(len(message_key_array) % MESSAGE_KEY_ARRAY_CELL_LEN == 0)
+    # Encode new key id as big endian unsigned integer
+    new_message_key_counter = struct.pack('>I', key_transport_counter)
 
-    # Sign all previous fields.
-    packet_fields = captain_identity_key + captain_transport_key + new_message_key_id + \
+    # Format the packet and sign it.
+    packet_fields = captain_identity_key + captain_transport_key + new_message_key_counter + \
                     message_key_array
     packet_signed = account.sign_msg_with_identity_key(packet_fields)
 
@@ -413,11 +391,7 @@ def send_key_transport_packet(viola_room, rekey=False):
     viola_room.status = "bootstrapping"
     util.debug("Sending KEY_TRANSPORT in %s!" % channel)
 
-    if not rekey:
-        msg_type = KEY_TRANSPORT_OPCODE
-    else:
-        msg_type = KEY_TRANSPORT_REKEY_OPCODE
-
+    msg_type = KEY_TRANSPORT_OPCODE
     msg = msg_type + payload_b64
     transport.send_viola_privmsg(server, channel, msg)
 
@@ -538,12 +512,25 @@ def user_changed_irc_nick(old_nick, new_nick):
     # A user changed nick: we need to update the viola rooms.
     account.user_changed_nick(old_nick, new_nick)
 
-def rekey_room(room_id):
-    splited_room_id = room_id.split('.')
+def rekey_room(metadata):
+    """Extract channel/server from metadata and rekey viola room."""
+
+    # Get channel/server from metadata
+    splited_room_id = metadata.split(',')
     room = splited_room_id[0]
     server = splited_room_id[1]
+
+    util.debug("Attempting to rekey room %s..." % room)
+
+    # Find the right viola room
     account = accounts.get_my_account()
-    viola_room = account.get_viola_room(room, server)
+    try:
+        viola_room = account.get_viola_room(room, server)
+    except accounts.NoSuchRoom:
+        util.debug("Tried to rekey unknown room %s..." % room)
+        return
+
+    # Rekey room!
     viola_room.rekey()
 
 class ViolaCommandError(Exception): pass

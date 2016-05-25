@@ -13,7 +13,6 @@ def start_room_cmd(parsed_args, buf):
 
     # Become leader of channel
     viola.start_viola_room(channel, server, buf)
-    accounts.OPERATIONS["rekey_timer"](channel + '.' + server)
 
 def introduction_cmd(parsed_args, buf):
     account = accounts.get_my_account()

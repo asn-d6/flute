@@ -3,39 +3,8 @@
 import crypto
 import util
 import viola
-
-class RoomMessageKeyCache(object):
-    def __init__(self):
-        self.cached_keys = {}
-        self.current_key = None
-        self.current_keyid = 0
-
-    def submit_key(self, key, key_id):
-        self.cached_keys[self.current_keyid] = self.current_key
-        self.cached_keys = { k : v for k,v in self.cached_keys.items() if k > key_id - 5}
-
-        self.current_key = key
-        self.current_keyid = key_id
-
-    def get_key(self, key_id):
-        if (not key_id) or (self.current_keyid == key_id):
-            if not self.current_key:
-                raise NoMessageKey()
-            return (self.current_key, self.current_keyid)
-        elif key_id:
-            found = self.cached_keys.get(key_id)
-            if not found:
-                raise NoMessageKey()
-            else:
-                return (found, key_id)
-        else:
-            raise NoMessageKey()
-
-    def get_current_key(self):
-        return self.current_key
-
-    def get_current_keyid(self):
-        return self.current_keyid
+import keycache
+import weechat
 
 class RoomMember(object):
     """Represents the member of a Viola room."""
@@ -58,6 +27,18 @@ class RoomMember(object):
     def get_identity_pubkey(self):
         return self.identity_pubkey
 
+# Rekey room every N minutes
+ROOM_REKEY_PERIOD = 10 * 60 * 1000 # 10 minutes (in milliseconds)
+
+# Max number of room message keys we should cache
+MAX_CACHED_ROOM_MESSAGE_KEYS = 10
+
+def schedule_periodic_room_rekey(channel, server):
+    util.debug("Scheduling rekey on %s!" % channel)
+    weechat.hook_timer(ROOM_REKEY_PERIOD, 0, 0,
+                       "rekey_timer_cb",
+                       channel + ',' + server)
+
 class ViolaRoom(object):
     """Represents a Viola room"""
     def __init__(self, channel_name, server, buf, i_am_captain):
@@ -74,13 +55,19 @@ class ViolaRoom(object):
         self.generate_room_key()
 
         # This is the cache that holds the room keys
-        self.key_cache = RoomMessageKeyCache()
+        self.key_cache = keycache.RoomMessageKeyCache(MAX_CACHED_ROOM_MESSAGE_KEYS)
 
         # A pointer to the weechat IRC buffer this room is in. XXX terrible abstraction
         self.buf = buf
 
         # Room status. Used to figure out whether to send encrypted messages or not.
         self.status = "bootstrapping"  # XXX hack. figure out proper FSM
+
+        self.key_transport_counter = 0
+
+        if self.i_am_captain:
+            # If we are captain we need to rekey room every N minutes.
+            schedule_periodic_room_rekey(self.name, self.server)
 
         # XXX make sure these things get cleaned when room/channel gets closed.
 
@@ -96,12 +83,13 @@ class ViolaRoom(object):
         """Return our 'room participant private key'."""
         return self.participant_priv_key
 
-    def set_room_message_key(self, room_message_key, key_id):
-        """We got the room message key! Set it!"""
-        self.key_cache.submit_key(room_message_key, key_id)
+    def set_room_message_key(self, room_message_key, captain_key_counter):
+        """Set the latest room message key, and the key transport counter."""
+        self.key_cache.submit_key(room_message_key)
+        self.key_transport_counter = captain_key_counter
 
-    def get_room_message_key(self, key_id=None):
-        return self.key_cache.get_key(key_id)
+    def get_current_room_message_key(self):
+        return self.key_cache.get_current_key()
 
     def get_room_message_key_id(self):
         return self.key_cache.get_current_keyid()
@@ -127,25 +115,32 @@ class ViolaRoom(object):
                 viola.send_key_transport_packet(self) # XXX dirty calling viola.py
 
     def rekey(self):
+        if not self.i_am_captain:
+            util.debug("Tried to rekey while i am not captain..." )
+            return
+        if not self.members:
+            util.debug("Not rekeying empty room...")
+            return
+
         util.debug("Rekeying for room %s ." % self.name)
-        if self.i_am_captain: # and self.members:
-            viola.send_key_transport_packet(self, rekey=True)
-        else:
-            util.debug("Tried to rekey while i am not master." )
+        viola.send_key_transport_packet(self)
+
     def get_member(self, nick):
         if nick not in self.members:
             raise NoSuchMember
         return self.members[nick]
 
-    def get_message_key_array(self):
+    def get_message_key_array_and_counter(self):
         """
         As the captain, we need to generate a new room message key, encrypt it, put
         it in the message key array and pass it to all the room members.
+        Return the message key array and the new message key counter.
         """
 
         assert(self.i_am_captain)
-        self.set_room_message_key(crypto.gen_symmetric_key(),
-                                  (self.key_cache.get_current_keyid() + 1) % 2**32)
+        fresh_room_message_key = crypto.gen_symmetric_key()
+        new_key_counter = self.key_transport_counter + 1
+        self.set_room_message_key(fresh_room_message_key, new_key_counter)
 
         util.debug("Generated new room message key for %s: %s" %
                    (self.name, crypto.get_hexed_key(self.key_cache.get_current_key())))
@@ -160,7 +155,40 @@ class ViolaRoom(object):
             message_key_array.append(key_ciphertext)
 
         # Concatenate all bytes and return
-        return "".join(message_key_array)
+        message_key_array_str = "".join(message_key_array)
+        return message_key_array_str, new_key_counter
+
+    def decrypt_room_message(self, message_ciphertext):
+        """
+        Figure out the right "room message key" and try to decrypt the room message
+        ciphertext.
+        """
+        plaintext = None
+
+        # Dont even try decrypting if we don't know the current room message key...
+        if self.key_cache.is_empty():
+            util.debug("Received ROOM_MESSAGE in %s but no message key. Ignoring." % self.name)
+            util.viola_channel_msg(self.buf,
+                                   "[You hear a viola screeching... Please do '/viola join-room' to join the session.]",
+                                   "grey")
+            return ""
+
+        # Loop over all keys and try to decrypt packet.
+        for potential_room_message_key in self.key_cache.message_key_iterator():
+            try:
+                plaintext = crypto.decrypt_room_message(potential_room_message_key, message_ciphertext)
+                break
+            except crypto.DecryptFail:
+                util.debug("Hm, that key did not work. Trying next one...")
+                continue
+
+        # Did we get a plaintext? If yes, return it!!
+        if plaintext:
+            return plaintext
+
+        # If we are here, all keys failed to decrypt and we can't do anything else...
+        util.debug("All keys failed to decrypt ROOM_MESSAGE packet...")
+        raise MessageDecryptFail
 
     def user_changed_nick(self, old_nick, new_nick):
         """
@@ -176,7 +204,8 @@ class ViolaRoom(object):
 
     def is_active(self):
         """Return True if this channel has been initialized and is active."""
-        return self.key_cache.get_current_key() # XXX use the FSM of the room
+        return bool(self.key_cache.get_current_key()) # XXX use the FSM of the room
 
 class NoMessageKey(Exception): pass
 class NoSuchMember(Exception): pass
+class MessageDecryptFail(Exception): pass

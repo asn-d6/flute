@@ -143,7 +143,10 @@ def get_message_key_ciphertext(captain_room_participant_privkey, room_message_ke
 def decrypt_room_message(room_message_key, ciphertext):
     """Decrypt ciphertext using room message key."""
     box = nacl.secret.SecretBox(room_message_key)
-    return box.decrypt(ciphertext)
+    try:
+        return box.decrypt(ciphertext)
+    except nacl.exceptions.CryptoError:
+        raise DecryptFail
 
 def get_hexed_key(key):
     """Hex crypto key and return hex string."""
@@ -152,3 +155,4 @@ def get_hexed_key(key):
 class NickAlreadyRegistered(Exception): pass
 class KeyAlreadyRegistered(Exception): pass
 class NoKeyFound(Exception): pass
+class DecryptFail(Exception): pass

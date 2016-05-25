@@ -9,12 +9,9 @@ import otrlib
 
 # TODO Only one viola account for now per weechat  :)
 ACCOUNT = None
-OPERATIONS = None
-def init_accounts(viola_dir, operations):
+def init_accounts(viola_dir):
     global ACCOUNT
-    global OPERATIONS
     ACCOUNT = Account(viola_dir)
-    OPERATIONS = operations
 
 def get_my_account():
     return ACCOUNT
