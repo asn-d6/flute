@@ -136,7 +136,7 @@ if reg:
         accounts.init_accounts(flute_dir)
 
         # Celebrate and setup callbacks
-        weechat.prnt("", otrlib.colorize("[Flute squeaks]", "green"))
+        weechat.prnt("", otrlib.colorize("[You can hear a flute tooting!]", "green"))
 
         # Catch incoming messages
         weechat.hook_modifier('irc_in_privmsg', 'message_in_cb', '')

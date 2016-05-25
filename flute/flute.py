@@ -51,8 +51,8 @@ def handle_room_message_packet(packet_payload, parsed, server):
         util.debug("Received ROOM_MESSAGE in a regular channel (%s). Ignoring." % channel)
         buf = util.get_current_buffer() # XXX weechat API shouldn't polute flute.py
         util.flute_channel_msg(buf,
-                               "[You hear a flute screeching... Please do '/flute join-room' to join the session.]",
-                               "lightcyan")
+                               "[Tootie-too! What an annoying sound! Do '/flute join-room' to join the flute session.]",
+                               color="lightcyan")
         return ""
 
 

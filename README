@@ -1,13 +1,16 @@
 DISCLAIMER:
 
-    THIS IS THE FIRST DRAFT OF THE FLUTE SPEC. FLUTE, AS A SOFTWARE AND AS A
-    PROTOCOL, ARE NOT USER READY YET. FLUTE IS CURRENTLY IN TESTING AND
+    THIS IS THE FIRST DRAFT OF THE FLUTE SPEC. FLUTE IS CURRENTLY IN TESTING AND
     DEVELOPMENT PHASE. PLEASE DON'T EVEN THINK OF USING IT FOR SENSITIVE STUFF!
 
 [*] Introduction:
 
-    Greetings. This is Flute, A multiparty chat protocol implemented on Weechat.
-    Please see flute_spec.txt for the protocol spec.
+    Greetings! This is Flute, a secure multiparty messaging protocol
+    implemented on Python and Weechat.
+
+    If you want to read how the protocol works, please see flute_spec.txt.
+
+    [This project used to be called Viola. It has since been renamed to Flute.]
 
 [*] Installation:
 
