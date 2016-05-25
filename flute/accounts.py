@@ -52,6 +52,11 @@ class Account(object):
             friends_dict = json.load(friends_file)
             util.control_msg("Current state of friend list:\n%s" % json.dumps(friends_dict, indent=2))
 
+    def print_fingerprint(self):
+        identity_key = self.get_identity_pubkey()
+        hexed_key = crypto.get_hexed_key(identity_key)
+        util.control_msg("My key is: %s\n" % hexed_key)
+
     def init_crypto(self):
         """Initialize per-account crypto: Create an identity keypair."""
         try:

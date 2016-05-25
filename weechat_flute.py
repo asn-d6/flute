@@ -76,6 +76,8 @@ def flute_command_cb(data, buf, args):
         commands.start_room_cmd(parsed_args, buf)
     elif parsed_args[0] == 'list-friends':
         commands.list_friends_cmd()
+    elif parsed_args[0] == 'list-fingerprint':
+        commands.list_fingerprint_cmd()
     else:
         util.control_msg("Unknown flute command: %s" % parsed_args[0])
         return weechat.WEECHAT_RC_ERROR
@@ -156,12 +158,14 @@ if reg:
                              "introduction [NICK] || "
                              "trust-key [NICK KEY] || "
                              "list-friends || "
+                             "list-fingerprint || "
                              "start-room || "
                              "join-room",
                              "",
                              "introduction %(nick) %-||"
                              "trust-key %-||"
                              "list-friends %-||"
+                             "list-fingerprint %-||"
                              "start-room %-||"
                              "join-room %-||",
                              "flute_command_cb",

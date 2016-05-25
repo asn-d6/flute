@@ -49,6 +49,10 @@ def list_friends_cmd():
     account = accounts.get_my_account()
     account.print_friend_list()
 
+def list_fingerprint_cmd():
+    account = accounts.get_my_account()
+    account.print_fingerprint()
+
 def trust_key_cmd(parsed_args, buf):
     nickname = parsed_args[1]
     hexed_key = parsed_args[2]
