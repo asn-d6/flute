@@ -1,11 +1,11 @@
-                            Viola Specification
+                            flute Specification
 Protocol version: v0
                               'One always plays the flute while they drink and chatter...'
 ---------------------------------------------------------------------------------------
 
 [*] System overview:
 
-  Viola is a multiparty messaging protocol with certain security properties. It
+  flute is a multiparty messaging protocol with certain security properties. It
   aims to be chat framework agnostic (like OTR), but the current spec is
   optimized for use over IRC.
 
@@ -14,13 +14,13 @@ Protocol version: v0
   security properties like deniability, transcript consistency or room
   consistency.
 
-  Viola is not a very secure messaging protocol when you compare it to
-  theoretical protocols like mpOTR. But Viola is real! It's implemented and its
+  flute is not a very secure messaging protocol when you compare it to
+  theoretical protocols like mpOTR. But flute is real! It's implemented and its
   protocol is simple to understand, implement and experiment with. There is
   lots of room for improvement, heuristics and complexity. The challenge is
   figuring out which features and use cases it can support.
 
-  See section [VIOLA-HISTORY] for the past and possible future of the flute protocol.
+  See section [FLUTE-HISTORY] for the past and possible future of the flute protocol.
 
 ---------------------------------------------------------------------------------------
 
@@ -49,13 +49,13 @@ Protocol version: v0
 
 [*] User workflow
 
-  A basic Viola user workflow is as follows:
+  A basic flute user workflow is as follows:
 
   Step 0) Alice collects the public identity keys of her friends' and adds them
           to her flute friends database.
 
   Step 1) Alice joins an empty IRC channel and issues a flute "start-room" command
-          to turn the channel into a Viola room and become the room captain.
+          to turn the channel into a flute room and become the room captain.
 
   Step 2) She then invites her friends to enter the channel and issue the
           "join-room" command to join the flute room.
@@ -68,27 +68,27 @@ Protocol version: v0
 
 [*] Use cases
 
-  At its present form (v0) the Viola protocol can accomodate the following use cases:
+  At its present form (v0) the flute protocol can accomodate the following use cases:
 
   - Alice works in an evil factory. She needs to privately speak to her
     coworkers about the abuse she is experiencing. One day in her shift, she
-    hands strips of paper with her Viola public key to her coworkers. She tells
+    hands strips of paper with her flute public key to her coworkers. She tells
     them to meet tonight at 21:00 in a flute room.
 
-    Alice at 20:55 uses Viola to visit the flute room, and announces herself as
+    Alice at 20:55 uses flute to visit the flute room, and announces herself as
     the captain of the channel. At 21:00, her friends start to join the flute
     room. For every new member, Alice generates and passes group keys to them
     in an end-to-end secure manner. Her friends can verify that it's actually
-    her because they know her Viola public key. After the discussion finishes,
-    they pick a new date for their meeting and everyone shuts down the Viola
+    her because they know her flute public key. After the discussion finishes,
+    they pick a new date for their meeting and everyone shuts down the flute
     software.
 
   - Bob is a computer security enthusiast. Bob wants to talk to his friends
     about a new fun bug he found.  Fortunately, he has secure 1-to-1
     communication channels with many of his friends (via OTR, pond, or
-    Signal). He uses OTR to pass his friends his Viola public key. Then he
-    arranges a rendezvous in a Viola room at a specific date. In the end of the
-    story, Bob and his friends meet in the Viola room and have a secure
+    Signal). He uses OTR to pass his friends his flute public key. Then he
+    arranges a rendezvous in a flute room at a specific date. In the end of the
+    story, Bob and his friends meet in the flute room and have a secure
     stimulating conversation.
 
   These are just some example use cases where flute can be useful. In the
@@ -96,9 +96,9 @@ Protocol version: v0
 
 -------------------------------------------------------------------------------------
 
-[*] Viola cryptography:
+[*] flute cryptography:
 
-  Viola uses the PyNaCl library for cryptography which has heavily influenced
+  flute uses the PyNaCl library for cryptography which has heavily influenced
   protocol design. NaCl was chosen because it's easy and speedy to develop and
   prototype with. In the future, we could swap NaCl and use other crypto
   libraries or primitives if there is a need.
@@ -123,17 +123,17 @@ Protocol version: v0
 
 - Long term keys:
 
-  All Viola users have a long-term signing keypair. This keypair represents a
-  user's identity and is used to sign Viola packets.
+  All flute users have a long-term signing keypair. This keypair represents a
+  user's identity and is used to sign flute packets.
 
-  Viola users also maintain a "friends database" in their disk where they store
+  flute users also maintain a "friends database" in their disk where they store
   their friend's long-term public keys for authenticating them in the
   future. Users can learn their friends' keys through the "introduction"
   command or through out-of-band means (e.g. OTR chat, or real life).
 
 - Ephemeral keys:
 
-  A user that joins a Viola room, generates and broadcasts an ephemeral "room
+  A user that joins a flute room, generates and broadcasts an ephemeral "room
   participant key" (signed by their long-term key) which is used by the captain
   for key transport purposes.
 
@@ -146,19 +146,19 @@ Protocol version: v0
 
 [*] Transport format:
 
-  This section specifies the Viola transport and fragmentation
-  format. Fragmentation is required since not all Viola packets can fit in a
+  This section specifies the flute transport and fragmentation
+  format. Fragmentation is required since not all flute packets can fit in a
   single IRC message. Our fragmentation format is heavily based on OTRv3.
 
   The fragmentation format for sending <PACKET> is:
       "?VLA,k,n!<PACKET>"
   where k is the current fragment number, and n is the total number of fragments.
 
-  Viola needs to accumulate all packet fragments before it can join them to
+  flute needs to accumulate all packet fragments before it can join them to
   forward the final packet to the user.
 
   The first two characters of the packet payload is the opcode.
-  After that, the payload of Viola follows as a base64 encoded blob.
+  After that, the payload of flute follows as a base64 encoded blob.
 
   Simple example of packet with opcode "02":
           "?VLA,1,1!02YXNkcXcxMzQxZm5qeGN2aG5xYXdvaHdxNGxoamZsbmEK=
@@ -176,16 +176,16 @@ Protocol version: v0
 
 -------------------------------------------------------------------------------------
 
-[*] Viola Room Commands:
+[*] flute Room Commands:
 
 [!] Room initialization:
 
-  Alice enters an empty IRC channel, initializes a Viola room and becomes its captain.
+  Alice enters an empty IRC channel, initializes a flute room and becomes its captain.
 
   Command: /flute start-room
 
   This command turns Alice into the room captain and forces her to monitor the
-  channel for new users. This command does not actually send any Viola packets
+  channel for new users. This command does not actually send any flute packets
   to the network.
 
   If the channel is not empty when start-room is issued, return an error that the
@@ -247,7 +247,7 @@ Protocol version: v0
   dave_key_transport and so on, to form a MESSAGE_KEY_ARRAY which contains the
   "room message key" encrypted to all room participants individually.
 
-  She then sends the following Viola packet to the room:
+  She then sends the following flute packet to the room:
 
   Alice -> Everyone: (KEY_TRANSPORT) (opcode: 02)
 
@@ -306,7 +306,7 @@ Protocol version: v0
 
 -------------------------------------------------------------------------------------
 
-[*] Miscellaneous Viola Commands:
+[*] Miscellaneous flute Commands:
 
 [!] Alice introduces herself to Bob:
 
@@ -340,10 +340,10 @@ Protocol version: v0
   join a flute room. Other room participants don't need to trust the identity
   key of newly added members.
 
-  Viola users who request to join a channel, MUST trust the identity of the
+  flute users who request to join a channel, MUST trust the identity of the
   room captain before accepting a KEY_TRANSPORT packet.
 
-  Viola users who receive a ROOM_MESSAGE packet, MUST trust the identity of the
+  flute users who receive a ROOM_MESSAGE packet, MUST trust the identity of the
   sender by verifying the signature.
 
   [XXX So everyone needs to trust everyone? Doesn't this suck for large groups?]
@@ -385,7 +385,7 @@ Protocol version: v0
 
 [!] Implications of using a key transport protocol
 
-  Viola does not use a multiparty key exchange protocol for generating the room
+  flute does not use a multiparty key exchange protocol for generating the room
   message key collectively; instead the captain locally generates the group
   message key and distributes it using a key transport protocol to the
   participants. This results in a simpler protocol that easily supports groups
@@ -461,7 +461,7 @@ Protocol version: v0
   decrypt.
 
   Another possible race condition is two people doing "start-room"
-  simultaneously and both of them becoming captains of a flute room. Viola
+  simultaneously and both of them becoming captains of a flute room. flute
   currently refuses to "start-room" if the IRC channel is populated, but it can
   also happen that both captains see the channel empty even though it's
   populated (especially with federated IRC servers, etc.)
@@ -471,9 +471,9 @@ Protocol version: v0
 
 -------------------------------------------------------------------------------------
 
-[*] Protocol past and future [VIOLA-HISTORY]
+[*] Protocol past and future [FLUTE-HISTORY]
 
-  Viola is a simplified version of the celo protocol which was a complicated
+  flute is a simplified version of the celo protocol which was a complicated
   version of the box protocol. The celo and box protocols were designed by joe
   and ahf.
 
@@ -481,7 +481,7 @@ Protocol version: v0
   key exchange; instead one user generates the group encryption key and
   transports it to the group in some way.
 
-  Celo had many more features than Viola. Here are some of them:
+  Celo had many more features than flute. Here are some of them:
 
   - All celo communication happened in one big channel. As a user, you parse
     all incoming messages to the big channel, you trial-decrypt them, and if
@@ -495,17 +495,17 @@ Protocol version: v0
     election protocol. No robust algorithm was suggested but using Raft or
     something similar could work.
 
-  - Celo had better deniability properties than Viola.
+  - Celo had better deniability properties than flute.
 
   - Celo supported one-to-one secure messaging.
 
   Celo has lots of good ideas, but it's also a very complex protocol with
-  various unanswered questions on the design and engineering. Viola is a strict
+  various unanswered questions on the design and engineering. flute is a strict
   subset of Celo; a much simpler protocol that is easier to analyze. But even
-  Viola has many unanswered questions! Maybe if we manage to solve these basic
-  questions, we can make Viola evolve into something more like Celo.
+  flute has many unanswered questions! Maybe if we manage to solve these basic
+  questions, we can make flute evolve into something more like Celo.
 
-  Other features that the Viola protocol could adopt in the future:
+  Other features that the flute protocol could adopt in the future:
 
   - Transcript consistency
   - Room consistency
@@ -518,7 +518,7 @@ Protocol version: v0
 
 [*] Acknowledgments
 
-  Viola would not be possible without the 1337 celo crew: joe, ahf and infinity0.
+  flute would not be possible without the 1337 celo crew: joe, ahf and infinity0.
 
   Also reading and borrowing code from weechat-otr was very helpful while
   bootstrapping the project. Thanks to koolfy for the weechat advice.
