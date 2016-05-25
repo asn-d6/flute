@@ -172,7 +172,8 @@ def handle_key_transport_packet(packet_payload, parsed, server):
     flute_room.add_member(sender, captain_identity_pubkey, captain_transport_pubkey)
 
     # Print some messages to the user
-    buf = util.flute_channel_msg(flute_room.buf, "Got room key for %s with captain %s!" % (channel, sender))
+    buf = util.flute_channel_msg(flute_room.buf,
+                                 "Got room key for %s from captain %s (friend name: %s)!" % (channel, sender, captain_friend_name))
     util.debug("Got a new room message key from captain %s: %s" % \
                (sender, crypto.get_hexed_key(room_message_key)))
 
@@ -239,7 +240,9 @@ def handle_room_join_packet(packet_payload, parsed, server):
 
     # XXX Security: Maybe we should ask the captain before autoadding them!
     buf = flute_room.buf
-    util.flute_channel_msg(buf, "Friend '%s' was added to the flute room!" % joining_friend_name)
+    util.flute_channel_msg(buf, "User '%s' (friend name: %s) was added to the flute room!" % \
+                           (sender_nick, joining_friend_name),
+                           color="green")
 
     # We are captains in the channel. Act like it!
     # There is a new room member! Refresh and send new key!
