@@ -67,9 +67,11 @@ DISCLAIMER:
 
 -- Finding friends
 
-    Flute assumes you can securely pass your Flute public key information to
-    your friends in some manner (e.g. using OTR, or in real life). You can use
-    the "/flute trust-key" command to import keys to your friend list.
+    Flute assumes you have passed your Flute public key information to your
+    friends in some secure out-of-band manner (e.g. using OTR, or in real
+    life). You can use the "/flute dump-fingerprint" command to learn your
+    public key, and your friends can use the "/flute trust-key" command to
+    import your key to their friend list.
 
     Another way to find friends is to connect to a Flute IRC server, and
     introduce yourself to them. For example, if you want to introduce yourself

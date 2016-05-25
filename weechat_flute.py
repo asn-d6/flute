@@ -11,6 +11,7 @@ SCRIPT_HELP = """FLUTE IS EXPERIMENTAL SOFTWARE PLEASE USE RESPONSIBLY!!!
 Introduce yourself to an IRC user: /flute introduction <user>
 Trust a friend's flute key: /flute trust-key <nick> <key>
 List friends: /flute list-friends
+List your public key and pass it to your friend: /flute dump-fingerprint
 
 Start a flute room in an IRC channel: /flute start-room
 Join an active flute room in an IRC channel: /flute join-room
@@ -76,7 +77,7 @@ def flute_command_cb(data, buf, args):
         commands.start_room_cmd(parsed_args, buf)
     elif parsed_args[0] == 'list-friends':
         commands.list_friends_cmd()
-    elif parsed_args[0] == 'list-fingerprint':
+    elif parsed_args[0] == 'dump-fingerprint':
         commands.list_fingerprint_cmd()
     else:
         util.control_msg("Unknown flute command: %s" % parsed_args[0])
@@ -158,14 +159,14 @@ if reg:
                              "introduction [NICK] || "
                              "trust-key [NICK KEY] || "
                              "list-friends || "
-                             "list-fingerprint || "
+                             "dump-fingerprint || "
                              "start-room || "
                              "join-room",
                              "",
                              "introduction %(nick) %-||"
                              "trust-key %-||"
                              "list-friends %-||"
-                             "list-fingerprint %-||"
+                             "dump-fingerprint %-||"
                              "start-room %-||"
                              "join-room %-||",
                              "flute_command_cb",

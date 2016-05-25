@@ -55,7 +55,9 @@ class Account(object):
     def print_fingerprint(self):
         identity_key = self.get_identity_pubkey()
         hexed_key = crypto.get_hexed_key(identity_key)
-        util.control_msg("My key is: %s\n" % hexed_key)
+        util.control_msg("Our identity key is:")
+        util.control_msg("\t%s" % otrlib.colorize(hexed_key, "green"))
+        util.control_msg("A friend can trust it using the '/flute trust-key' command.")
 
     def init_crypto(self):
         """Initialize per-account crypto: Create an identity keypair."""
