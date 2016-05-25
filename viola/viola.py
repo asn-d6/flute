@@ -147,6 +147,13 @@ def handle_key_transport_packet(packet_payload, parsed, server):
     # Verify captain signature
     captain_identity_pubkey.verify(payload)    # XXX catch exception
 
+    # Check for replays using KEY_TRANSPORT counter
+    if new_key_counter < 1:
+        util.debug("Corrupted key counter %d" % new_key_counter)
+        return ""
+    if viola_room.key_transport_is_replay(new_key_counter):
+        return ""
+
     # Try to decrypt the message key array
     try:
         room_message_key = crypto.decrypt_room_message_key(encrypted_message_key_array,

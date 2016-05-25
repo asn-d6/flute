@@ -91,8 +91,15 @@ class ViolaRoom(object):
     def get_current_room_message_key(self):
         return self.key_cache.get_current_key()
 
-    def get_room_message_key_id(self):
-        return self.key_cache.get_current_keyid()
+    def key_transport_is_replay(self, new_key_counter):
+        if new_key_counter <= self.key_transport_counter:
+            util.viola_channel_msg(self.buf,
+                                   "Received replayed KEY_TRANSPORT packet (%d / %d)" % \
+                                   (new_key_counter, self.key_transport_counter),
+                                   color="red")
+            return True
+
+        return False
 
     def add_member(self, nickname, identity_pubkey, room_pubkey):
         """Add member to viola room."""
