@@ -9,7 +9,8 @@ def irc_sanitize(msg):
     """Remove NUL, CR and LF characters from msg.
     The (utf-8 encoded version of a) string returned from this function
     should be safe to use as an argument in an irc command."""
-    return unicode(msg).translate(IRC_SANITIZE_TABLE)
+    utf_msg = unicode(msg, 'utf8')
+    return utf_msg.translate(IRC_SANITIZE_TABLE)
 
 def buffer_get_string(buf, prop):
     """Wrap weechat.buffer_get_string() with utf-8 encode/decode."""
@@ -72,17 +73,17 @@ def build_privmsg_out(target, msg):
     """Build outbound IRC PRIVMSG command(s)."""
     cmd = []
     for line in msg.splitlines():
-        cmd.append('PRIVMSG {target} :{line}'.format(
-            target=irc_sanitize(target),
-            line=irc_sanitize(line)))
+        target=irc_sanitize(target)
+        line = irc_sanitize(line)
+        cmd.append("PRIVMSG %s :%s" % (target, line))
     return '\r\n'.join(cmd)
 
 def build_privmsg_in(fromm, target, msg):
     """Build inbound IRC PRIVMSG command."""
-    return ':{user} PRIVMSG {target} :{msg}'.format(
-        user=irc_sanitize(fromm),
-        target=irc_sanitize(target),
-        msg=irc_sanitize(msg))
+    user=irc_sanitize(fromm)
+    target=irc_sanitize(target)
+    msg=irc_sanitize(msg)
+    return ":%s PRIVMSG %s :%s" % (user, target, msg)
 
 # Ripped from weechat_otr.py
 # XXX unittest see tests in weechat-otr.py
